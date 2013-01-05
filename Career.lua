@@ -60,7 +60,6 @@ FearCareer.support_mechanic = {
 -- Functions
 
 function FearCareer.OnInitialize()
-	verbose(info.." loaded succesfully")
 	return true
 end
 
@@ -71,16 +70,16 @@ function FearCareer.LoadModules() -- Loads and career ability FearTarget. into t
 	for mod_k,mod_v in pairs(FearCareer.custom_modules) do
 		local player_level = FearPlayer.Level()
 		local reindexed_abilities = {}
-		local no_rank = 1000
+		local no_rating = 1000
 		local merged_abilities = TableMerge(FearAbility.storage.abilities, mod_v.abilities)
 		custom_modules[mod_k] = mod_v
 		
         -- Rank Abilities
 		for ability_id, ability in pairs(merged_abilities) do
-            if ability.rank ~= nil then
-                reindexed_abilities[ability.rank] = ability
+            if ability.rating ~= nil then
+                reindexed_abilities[ability.rating] = ability
             else
-                reindexed_abilities[no_rank] = ability  
+                reindexed_abilities[no_rating] = ability  
                 no_rank = no_rank + 1
             end
 		end

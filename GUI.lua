@@ -24,10 +24,10 @@ FearGUI.LockStatus = false
 -- Functions
 function FearGUI.OnInitialize()
 	if(FearGUI.Create()) then
-		verbose(info.. " loaded succesfully")
 		FearGUI.IconUpdate()
+		return true
 	else
-		verbose(info.. " failed to load")
+		return false
 	end
 end
 

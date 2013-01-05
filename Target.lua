@@ -39,10 +39,11 @@ FearTarget.rating = {
 -- Functions
 function FearTarget.OnInitialize()
 
-	FearTarget.CreateFriendlyEntityString()
-	FearTarget.CreateHostileEntityString()
-
-	verbose(info.." loaded succesfully")
+	if FearTarget.CreateFriendlyEntityString() and FearTarget.CreateHostileEntityString() then
+		return true
+	else
+		return false
+	end
 end
 
 function FearTarget.Check()

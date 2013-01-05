@@ -137,26 +137,22 @@ function Fear.OnInitialize()
 	if (WarExtDLLInfo) then 
 		local item_count = 0
 		local item_total = #fear_init	
-		local item_not_loaded = nil	
 		verbose("Starting in VERBOSE mode")
 		verbose("Debug info will be written to log")
         verbose("Loading "..item_total.." items")
 
 		-- Initialize required classes
         for _,v in pairs(fear_init) do
+
             if not v.OnInitialize() then
-            	if not item_not_loaded  then
-            		item_not_loaded = v
-            	else
-            		item_not_loaded = ", "..v
-            	end
+            	verbose("A Module FAILED to load")
+            else
+            	verbose( v.info.name..", "..v.info.version.." Loaded successfully")
+            	item_count = item_count + 1
             end
-            item_count = item_count + 1
         end 
          
-         if item_count ~= item_total then
-         	verbose("ERROR: The following items did not load")
-         else
+         if item_count == item_total then
          	verbose("All modules loaded!")
          end
 
@@ -244,7 +240,7 @@ function Fear.OnInitialize()
 	    
 --]]	
 
-		say(Fear.info.name..", "..Fear.info.version.." started succesfully")
+		say(Fear.info.name.." is REAL")
 		return true
 	else
         Fear.ENV.ENABLE = false
@@ -394,7 +390,6 @@ function Fear.SetupEnvironment(reset, refresh)
 	
     -- Load ability cache
     if not FearAbility.storage.abilities or refresh then FearAbility.Collect() end
-    
 	-- Create friendy target entity string
 	if FearTarget.CreateFriendlyEntityString() then
 		if reset or refresh then

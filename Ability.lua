@@ -24,18 +24,19 @@ local function addToDebug(str) Fear.Debug(str) end
 -- Variables
 
 FearAbility.current_ability = nil
-FearAbility.storage = {abilities, items}
+FearAbility.storage = {abilities, items = false}
 FearAbility.cast_time = 0
 
 --##############################################################
 -- Functions
 
 function FearAbility.OnInitialize()
-    verbose(info.. " loaded succesfully")
+    return true
+
 end
 
 function FearAbility.Check(ability_type)
-    for rank,ability in OrderedPairs(FearAbility.storage.abilities) do
+    for rating,ability in OrderedPairs(FearAbility.storage.abilities) do
         if FearAbility.IsReady(ability) then
             
         end
@@ -254,73 +255,79 @@ function FearAbility.Collect()
     local language = Fear.language  
     local extracted_abilities = {}
     local current_ability_data = TableMerge(GetAbilityTable(GameData.AbilityType.STANDARD), GetAbilityTable(GameData.AbilityType.MORALE)) 
-    local no_rank = 5000
-    local rank = 0
-    current_ability_data = TableMerge(current_ability_data, FearCareer.modules[MODULESELECT].abilities)
+    local no_rating = 5000
+    local rating = 0
+    local player_level = FearPlayer.Level()
+    current_ability_data = TableMerge(current_ability_data, FearCareer.modules[Fear.ENV.MODULESELECT].abilities)
     addToLog("Updating abilities")
 
     -- extract the data
     for key,data in pairs(current_ability_data) do
-        local db_index = 0
-        local db_name = tostring(data.name)
+        if data.rank == nil or data.rank <= player_level then
+            local db_index = 0
+            local db_name = tostring(data.name)
 
-        -- get the abilityId and remove from the array
-        local abilityId = key -- the actual unique id of the ability
-        
-        -- temporary store for the ability data as we flatten the structure
-        local abilityData = data
-       
-        local _,maxrange = GetAbilityRanges(abilityId) --since 1.3.6 there's no need for minrange
-        abilityData.range = maxrange
-        abilityData.apCost = GetAbilityActionPointCost(abilityId)
-        abilityData.casttime = GetAbilityCastTime(abilityId)
-        
-        -- rounding of timers
-        abilityData.reuseTimer = math.floor(data.reuseTimer) -- remove the useless microseconds
-        abilityData.reuseTimerMax = math.floor(data.reuseTimerMax)
-        abilityData.cooldown = math.floor(data.cooldown)
-        
-        -- add career
-        abilityData.careername = GameData.Player.career.name
-        
-        -- tooptip display
-        abilityData.tooltip = {}
-        abilityData.tooltip[language] = {}
-        abilityData.tooltip[language].name = GetStringFormat(StringTables.Default.LABEL_ABILITY_TOOLTIP_ABILITY_NAME, {data.name})
-        abilityData.tooltip[language].description = GetAbilityDesc (abilityId, FearPlayer.Level())
-        abilityData.tooltip[language].specline = DataUtils.GetAbilitySpecLine (data)
-        abilityData.tooltip[language].cost = FearAbility.GetAbilityCostText (data)
-        abilityData.tooltip[language].casttime = FearAbility.GetAbilityCastTimeText (data)
-        abilityData.tooltip[language].type = DataUtils.GetAbilityTypeText (data)
-        abilityData.tooltip[language].level = FearAbility.GetAbilityLevelText (data)
-        abilityData.tooltip[language].range = FearAbility.GetAbilityRangeText (data)
+            -- get the abilityId and remove from the array
+            local abilityId = key -- the actual unique id of the ability
+            
+            -- temporary store for the ability data as we flatten the structure
+            local abilityData = data
+           
+            local _,maxrange = GetAbilityRanges(abilityId) --since 1.3.6 there's no need for minrange
+            abilityData.range = maxrange
+            abilityData.apCost = GetAbilityActionPointCost(abilityId)
+            abilityData.casttime = GetAbilityCastTime(abilityId)
+            
+            -- rounding of timers
+            abilityData.reuseTimer = math.floor(data.reuseTimer) -- remove the useless microseconds
+            abilityData.reuseTimerMax = math.floor(data.reuseTimerMax)
+            abilityData.cooldown = math.floor(data.cooldown)
+            
+            -- add career
+            abilityData.careername = GameData.Player.career.name
+            addToLog("Adding "..db_name.." ID#"..abilityId)
+            addToLog("Rank: "..tostring(data.rank))
 
-        local realCooldown = GetAbilityCooldown(abilityId) / 1000
-        abilityData.tooltip[language].cooldown = FearAbility.GetAbilityCooldownText( realCooldown ) 
-        local reqs = {}
-        reqs[1], reqs[2], reqs[3] = GetAbilityRequirements (abilityId) 
-        abilityData.tooltip[language].requirements = reqs
-        
-        -- remove useless values
-        abilityData.key=nil
-        abilityData.advanceIcon=nil
-        abilityData.advanceID=nil
-        abilityData.advanceName=nil
-        abilityData.advanceValue=nil
-        abilityData.packageId=nil
-        abilityData.requiredActionCounterID=nil
-        abilityData.abilityInfo=nil
+            -- tooptip display
+            abilityData.tooltip = {}
+            abilityData.tooltip[language] = {}
+            abilityData.tooltip[language].name = GetStringFormat(StringTables.Default.LABEL_ABILITY_TOOLTIP_ABILITY_NAME, {data.name})
+            abilityData.tooltip[language].description = GetAbilityDesc (abilityId, FearPlayer.Level())
+            abilityData.tooltip[language].specline = DataUtils.GetAbilitySpecLine (data)
+            abilityData.tooltip[language].cost = FearAbility.GetAbilityCostText (data)
+            abilityData.tooltip[language].casttime = FearAbility.GetAbilityCastTimeText (data)
+            abilityData.tooltip[language].type = DataUtils.GetAbilityTypeText (data)
+            abilityData.tooltip[language].level = FearAbility.GetAbilityLevelText (data)
+            abilityData.tooltip[language].range = FearAbility.GetAbilityRangeText (data)
 
-        -- Rank index
-        if abilityData.rank then
-            rank = abilityData.rank
-        else 
-            rank = no_rank
-            no_rank = no_rank + 1
+            local realCooldown = GetAbilityCooldown(abilityId) / 1000
+            abilityData.tooltip[language].cooldown = FearAbility.GetAbilityCooldownText( realCooldown ) 
+            local reqs = {}
+            reqs[1], reqs[2], reqs[3] = GetAbilityRequirements (abilityId) 
+            abilityData.tooltip[language].requirements = reqs
+            
+            -- remove useless values
+            abilityData.key=nil
+            abilityData.advanceIcon=nil
+            abilityData.advanceID=nil
+            abilityData.advanceName=nil
+            abilityData.advanceValue=nil
+            abilityData.packageId=nil
+            abilityData.requiredActionCounterID=nil
+            abilityData.abilityInfo=nil
+
+            -- Rating index
+            if abilityData.rating then
+                rating = abilityData.rating
+            else 
+                rating = no_rating
+                no_rating = no_rating + 1
+            end
+
+            table.insert(extracted_abilities, rating, abilityData)
         end
-
-        table.insert(extracted_abilities, rank, abilityData)
     end
+    addToLog("Abilities Updated")
 
     FearAbility.storage.abilities = extracted_abilities --TableMerge(current_ability_data, extracted_abilities)
 
@@ -342,8 +349,6 @@ function FearAbility.Collect()
     --metaData.Player.INTELLIGENCE = GetBonus(GameData.BonusTypes.EBONUS_INTELLIGENCE,GameData.Player.Stats[GameData.Stats.INTELLIGENCE].baseValue)
     --metaData.Player.WILLPOWER = GetBonus(GameData.BonusTypes.EBONUS_WILLPOWER,GameData.Player.Stats[GameData.Stats.WILLPOWER].baseValue)
     
-    --FearAbility.Storage.abilities[string.gsub(tostring(GameData.Player.career.name), " ", "_")].meta = metaData
-    
-    
+    --FearAbility.Storage.abilities[string.gsub(tostring(GameData.Player.career.name), " ", "_")].meta = metaData 
 end
 

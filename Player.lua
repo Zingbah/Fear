@@ -41,7 +41,6 @@ FearPlayer.equipment_data = {}
 -- Functions
 
 function FearPlayer.OnInitialize()
-	verbose(info.." loaded succesfully")
 	return true
 end
 
