@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Interface xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Interface.xsd">
+    <Scripts>
+        <Script file="Fear.lua" />
+    </Scripts>
+	
+	<Assets>
+	<Texture name="M1" file="images/M1.tga" />
+	<Texture name="M2" file="images/M2.tga" />
+	</Assets>
+	
+	<Windows>
+        <Window name="Fear" handleinput="true" movable="true" popable="false" savesettings="true">
+		
+            <Size>
+                <AbsPoint x="65" y="70" />
+            </Size>
+            <Anchors>
+                <Anchor point="center" relativePoint="center" relativeTo="Root">
+	               <AbsPoint x="0" y="0" />
+	            </Anchor>
+            </Anchors>
+            <Windows>
+                <DynamicImage name="$parentRoot" savesettings="true" handleinput="true" texture="M1">
+					<Size>
+						<AbsPoint x="48" y="48" />
+					</Size>
+					<TexCoords x="0" y="0" />
+					<TexDims x="48" y="48" />
+                    <EventHandlers>
+                        <EventHandler event="OnLButtonUp" function="FearGUI.LClick" />
+                        <EventHandler event="OnRButtonUp" function="FearGUI.RClick" />
+                    </EventHandlers>
+					<Anchors>
+						<Anchor point="center" relativePoint="center" relativeTo="$parent" />
+					</Anchors>
+                </DynamicImage>
+			</Windows>			
+      	</Window>
+		
+		<Window name="FearSettings" movable="true" savesettings="true" layer="popup">
+            <Size>
+                <AbsPoint x="550" y="350" />
+            </Size>
+            <Anchors>
+                <Anchor point="center" relativePoint="center" relativeTo="">
+                    <AbsPoint x="0" y="0" />
+                </Anchor>
+            </Anchors>
+            <EventHandlers>
+                <EventHandler event="OnInit" function="Fear.OnInitialize" />
+            </EventHandlers>
+            <Windows>
+               
+                <Window name="$parentBackground" inherits="EA_Window_DefaultFrame" >
+                    <Anchors>
+                        <Anchor point="topleft" relativePoint="topleft" >
+                            <AbsPoint x="0" y="32" />
+                        </Anchor>
+                        <Anchor point="bottomright" relativePoint="bottomright" />
+                    </Anchors>
+                </Window>
+				
+                <Window name="$parentTitleBar" inherits="EA_TitleBar_Default" />                                      
+                        
+                <Button name="$parentClose" inherits="EA_Button_DefaultWindowClose" >
+                    <EventHandlers>
+                        <EventHandler event="OnLButtonUp" function="FearGUI.RClick" />
+                    </EventHandlers>
+                </Button>
+							
+				<Button name="$parentButton1" inherits="EA_Button_DefaultResizeable">
+                    <Size>
+                        <AbsPoint x="150" y="35" />
+                    </Size>
+                    <Anchors>
+                        <Anchor point="bottomleft" relativePoint="bottomleft" relativeTo="$parentBackground">
+                            <AbsPoint x="15" y="-13" />
+                        </Anchor>
+                    </Anchors>
+                    <EventHandlers>
+                        <EventHandler event="OnLButtonUp" function="Fear.ApplySettings" />
+                    </EventHandlers>
+                </Button>
+				
+                <Button name="$parentButton2" inherits="EA_Button_DefaultResizeable">
+                    <Size>
+                        <AbsPoint x="150" y="35" />
+                    </Size>
+                    <Anchors>
+                        <Anchor point="bottomright" relativePoint="bottomright" relativeTo="$parentBackground">
+                            <AbsPoint x="-15" y="-13" />
+                        </Anchor>
+                    </Anchors>
+                    <EventHandlers>
+                        <EventHandler event="OnLButtonUp" function="FearGUI.RClick" />
+                    </EventHandlers>
+                </Button>	
+			
+				<LogDisplay name="$parentText" font="font_chat_text" scrollbar="$parentScrollbar" scrollbarPosition="right" background="" maxchars="4096" maxentries="-1">
+                    <Size>
+                        <AbsPoint x="400" y="150" />
+                    </Size>
+                    <Anchors>
+                        <Anchor point="topleft" relativePoint="topleft" relativeTo="$parentBackground">
+                            <AbsPoint x="20" y="10" />
+                        </Anchor>
+                        <Anchor point="topright" relativePoint="bottomright" relativeTo="$parentBackground">
+                            <AbsPoint x="20" y="120" />
+                        </Anchor>
+                    </Anchors>
+                    <Windows>
+   
+				<VerticalScrollbar name="$parentScrollbar" inherits="EA_ScrollBar_DefaultVerticalChain">
+                            <Anchors>
+                                <Anchor point="topright" relativePoint="topright">
+                                    <AbsPoint x="-30" y="0" />
+                                </Anchor>
+                                <Anchor point="bottomright" relativePoint="bottomright"/>
+                            </Anchors>
+                        </VerticalScrollbar>
+				
+                    </Windows>
+                </LogDisplay>
+				
+				<Window name="$parentLogDisplaySeperator1" inherits="EA_Window_DefaultSeparator" handleinput="false" >
+                    <Anchors>
+                         <Anchor point="topleft" relativePoint="bottomleft" relativeTo="$parentBackground" >
+                            <AbsPoint x="0" y="140" />
+                        </Anchor>
+                        <Anchor point="topright" relativePoint="bottomright" relativeTo="$parentBackground" >
+                            <AbsPoint x="0" y="140" />
+                        </Anchor>
+                    </Anchors>
+                </Window>
+
+				<Window name="$parentLogDisplaySeperator2" inherits="EA_Window_DefaultSeparator" handleinput="false" >
+                    <Anchors>
+                         <Anchor point="topleft" relativePoint="bottomleft" relativeTo="$parentBackground" >
+                            <AbsPoint x="0" y="275" />
+                        </Anchor>
+                        <Anchor point="topright" relativePoint="bottomright" relativeTo="$parentBackground" >
+                            <AbsPoint x="0" y="275" />
+                        </Anchor>
+                    </Anchors>
+                </Window>
+			</Windows>
+		</Window>
+	
+    </Windows>
+	
+</Interface>
