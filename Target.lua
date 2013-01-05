@@ -26,6 +26,7 @@ FearTarget.search_radius = 300
 FearTarget.heal_radius = 150
 FearTarget.dps_radius = 100
 FearTarget.friendly_entity_string = nil
+FearTarget.hostile_entity_string = nil
 FearTarget.dots = {}
 FearTarget.rating = {
 	-- 0 = lowest to 1 = highest
@@ -37,6 +38,10 @@ FearTarget.rating = {
 --##############################################################
 -- Functions
 function FearTarget.OnInitialize()
+
+	FearTarget.CreateFriendlyEntityString()
+	FearTarget.CreateHostileEntityString()
+
 	verbose(info.." loaded succesfully")
 end
 
@@ -45,20 +50,23 @@ function FearTarget.Check()
 	
 end
 
-function FearTarget.FriendlyLowestHealth()
-	
-	-- Create a support target list based on player's priorities
+function FearTarget.Friendly()
+	   	-- Create a support target list based on player's priorities
     local group_data = FearPlayer.group_data
     local entity_list = EntityList(FearTarget.friendly_entity_string)
-    FearTarget.entity_list.friendly = {}
+    table.sort(entity_list, FearTarget.SortByHealth)
+   
     if table.maxn(entity_list) > 0 then
         for GUID,entity in pairs(entity_list) do
-            if entity.healthPercent < 100 then
-			addToLog(tostring(entity.name).." ["..entity.healthPercent.."]")
+            if entity.healthPercent < Fear.ENV.HEALTHTHRESHOLD.heal then
+            	if not FearTarget.last_known_friendly or (entity.name ~= FearTarget.last_known_friendly.name and entity.healthPercent ~= FearTarget.last_known_friendly.healthPercent) then
+            		FearTarget.last_known_friendly = entity
+					addToLog("Friendly Low Health: "..tostring(FearTarget.last_known_friendly.name).." ["..FearTarget.last_known_friendly.healthPercent.."]")
+				end
                 if #FearPlayer.group_info > 0 then
                     for _,group_player in pairs(FearPlayer.group_info) do
                         if string.find(tostring(entity.name), tostring(group_player.name)) then
-                            if SUPPORTMODE == "group" then
+                            if Fear.ENV.SUPPORTMODE == "group" then
                                 if group_player.group == FearPlayer.group then
                                     entity.inGroup = true
                                     entity.inWarband = true
@@ -117,13 +125,13 @@ end
 function FearTarget.CreateFriendlyEntityString()
 	entity_str ="friendly,"
 	
-	if SUPPORTMODE ~= "dps" then
+	if Fear.ENV.SUPPORTMODE ~= "dps" then
 		entity_str = entity_str .. "player,"
 	end
-	if TARGETINGMODE.npc then
+	if Fear.ENV.TARGETINGMODE.npc then
 		entity_str = entity_str .. "npc,"
 	end
-	if not LOS then
+	if not Fear.ENV.LOS then
 		entity_str = entity_str .. "los,"
 	end
 	if FearPlayer.can_resurrect then
@@ -136,7 +144,7 @@ function FearTarget.CreateFriendlyEntityString()
 	end	
 	
 	FearTarget.friendly_entity_string = entity_str
-	
+
 	return true	
 end
 
@@ -151,21 +159,21 @@ function FearTarget.FriendlyEntities()
 end
 
 function FearTarget.CreateHostileEntityString()
-	entity_str ="hostile,"
+	entity_str ="hostile,alive,"
 	
-	if SUPPORTMODE ~= "dps" then
-		entity_str = entity_str + "player,"
+	if Fear.ENV.SUPPORTMODE ~= "dps" then
+		entity_str = entity_str .. "player,"
 	end
-	if TARGETINGMODE.npc then
-		entity_str = entity_str + "npc,"
+	if Fear.ENV.TARGETINGMODE.npc then
+		entity_str = entity_str .. "npc,"
 	end
-	if not LOS then
-		entity_str = entity_str + "los,"
+	if not Fear.ENV.LOS then
+		entity_str = entity_str .. "los,"
 	end
 	if FearPlayer.heal_radius then
-		entity_str =  entity_str + "maxdistance="..dps_radius
+		entity_str =  entity_str .. "maxdistance="..dps_radius
 	else
-		entity_str =  entity_str + "maxdistance=100"
+		entity_str =  entity_str .. "maxdistance=100"
 	end	
 	
 	FearTarget.hostile_entity_string = entity_str

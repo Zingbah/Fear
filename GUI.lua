@@ -25,7 +25,7 @@ FearGUI.LockStatus = false
 function FearGUI.OnInitialize()
 	if(FearGUI.Create()) then
 		verbose(info.. " loaded succesfully")
-		
+		FearGUI.IconUpdate()
 	else
 		verbose(info.. " failed to load")
 	end
@@ -33,13 +33,13 @@ end
 
 function FearGUI.LClick(disable) -- Toggle Fear
 	local msg = ""
-	if ENABLED then
-		DynamicImageSetTexture( "FearRoot",  "M1", 0, 0 )
-		ENABLED = false
+	if Fear.ENV.ENABLED then
+		Fear.ENV.ENABLED = false
+		FearGUI.IconUpdate()
 		msg = program .. " has been disabled"
 	else
-		DynamicImageSetTexture( "FearRoot",  "M2", 0, 0 )
-		ENABLED = true
+		Fear.ENV.ENABLED = true
+		FearGUI.IconUpdate()
 		msg = program .. " has been enabled"
         
 	end
@@ -47,11 +47,13 @@ function FearGUI.LClick(disable) -- Toggle Fear
 	alert(msg)
 end
 
+
+
 function FearGUI.RClick() -- Toggle Fear settings window
-	if (SHOWWINDOW) then SHOWWINDOW = false
-	else SHOWWINDOW = true  end
+	if (Fear.ENV.SHOWWINDOW) then Fear.ENV.SHOWWINDOW = false
+	else Fear.ENV.SHOWWINDOW = true  end
 		
-	WindowSetShowing("FearSettings",SHOWWINDOW)
+	WindowSetShowing("FearSettings",Fear.ENV.SHOWWINDOW)
 end
 
 function FearGUI.Lock()
@@ -59,10 +61,19 @@ function FearGUI.Lock()
 	WindowSetMovable( "FearSettings", false)
 end
 
-function Fear.Unlock()
+function FearGUI.Unlock()
 	FearGUI.LockStatus = false
 	WindowSetMovable( "FearSettings", true)
 end
+
+function FearGUI.IconUpdate()
+	if Fear.ENV.ENABLED then 
+		DynamicImageSetTexture( "FearRoot",  "M2", 0, 0 ) 
+	else
+		DynamicImageSetTexture( "FearRoot",  "M1", 0, 0 )
+	end
+end
+
 
 function FearGUI.Create()
 	-- create GUI-Button 

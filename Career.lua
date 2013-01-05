@@ -50,16 +50,7 @@ FearCareer.db = {
 		[GameData.CareerLine.DISCIPLE]		=  {name = "Disciple of Khane", 		arch = {heal=true, close=true, magic=true}},
 }
 FearCareer.name = FearCareer.db[GameData.Player.career.line].name
-FearCareer.resurrect_abilities = {
-	697,		-- Alter Fate
-	1598,		-- Rune Of Life
-	1619,		-- Grimnir's Fury
-	1908,		-- Gedup!
-	8248,		-- Breath Of Sigmar
-	8555,		-- Tzeentch Shall Remake You
-	9246,		-- Gift Of Life
-	14526,		-- Rally
-}
+
 FearCareer.support_mechanic = {
 	8237,		-- Supplication
 	9561,		-- Blood Offering (need to confirm ID)
@@ -70,6 +61,7 @@ FearCareer.support_mechanic = {
 
 function FearCareer.OnInitialize()
 	verbose(info.." loaded succesfully")
+	return true
 end
 
 function FearCareer.LoadModules() -- Loads and career ability FearTarget. into the ability class
@@ -115,6 +107,7 @@ function FearCareer.IsSupport()
 	return is_support
 end
 
+--[[
 function NerfedAPI.hasMechanic(needed_mechanic_value)
     needed_mechanic_value = tonumber(needed_mechanic_value)
     local current_mechanic_value = tonumber(GetCareerResource( GameData.BuffTargetType.SELF ))
@@ -145,3 +138,4 @@ function NerfedAPI.hasMechanic(needed_mechanic_value)
     end
     return false
 end
+--]]

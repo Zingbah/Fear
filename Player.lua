@@ -10,6 +10,7 @@ FearPlayer = {
 --##############################################################
 --#### Local Variables and Functions
 
+local info = FearPlayer.info.name..", "..FearPlayer.info.version
 local function say(str) Fear.Say(str) end
 local function alert(str) Fear.Alert(str) end
 local function verbose(str) Fear.Verbose(str) end
@@ -18,20 +19,15 @@ local function addToDebug(str) Fear.Debug(str) end
 
 --##############################################################
 -- Variables
-FearPlayer.position = {
-	current_x = 0,
-	current_y = 0,
-	last_x = 0,
-	last_y = 0,
-}
+FearPlayer.position = {current = GetPlayerPosition(), old = {x = 0, y = 0, z = 0,}}
+FearPlayer.cast_timer = {current = 0, old = L"0.0s"}
 FearPlayer.guid = 0
 FearPlayer.name = GameData.Player.name
-FearPlayer.can_heal = nil
 FearPlayer.group_data = nil
 FearPlayer.can_resurrect = false
 FearPlayer.is_casting = false
 FearPlayer.in_group = false
-FearPlayer.is_moving = false
+FearPlayer.is_moving = true
 FearPlayer.in_scenario = false
 FearPlayer.in_warband = false
 FearPlayer.group_info = {}
@@ -45,16 +41,16 @@ FearPlayer.equipment_data = {}
 -- Functions
 
 function FearPlayer.OnInitialize()
-	verbose(FearPlayer.info.name..", "..FearPlayer.info.version.." loaded succesfully")
+	verbose(info.." loaded succesfully")
+	return true
 end
 
 function FearPlayer.OnZoneChange()
 	FearPlayer.GUID = GetPlayer().GUID
 end
 
-function FearPlayer.OnMove(x, y)
-    FearPlayer.position.current_x = x
-    FearPlayer.position.current_y = y
+function FearPlayer.OnMove(x, y) -- Doesn't seem to work...
+		
 end
 
 function FearPlayer.OnBeginCast(abilityId, isChannel, desiredCastTime, averageLatency)
@@ -63,7 +59,7 @@ function FearPlayer.OnBeginCast(abilityId, isChannel, desiredCastTime, averageLa
 end
 
 function FearPlayer.OnCastSetback(new_cast_time)
-    if STAYONCAST and FearPlayer.cast_time ~= 0 then
+    if Fear.ENV.STAYONCAST and FearPlayer.cast_time ~= 0 then
         FearPlayer.cast_time = new_cast_time
     end
 	addToLog("Cast interupted")
@@ -126,9 +122,52 @@ function FearPlayer.Cast(ability,GUID)
 	end				
 end
 
-function FearPlayer.IsRVR()
+function FearPlayer.IsRVR() -- WORKING
     return GameData.Player.rvrZoneFlagged
 end
+
+function FearPlayer.MovingCheck() -- WORKING
+	FearPlayer.position.current = GetPlayerPosition()
+
+	if FearPlayer.position.current.x == FearPlayer.position.old.x and FearPlayer.position.current.y == FearPlayer.position.old.y and FearPlayer.position.current.z == FearPlayer.position.old.z then
+		if FearPlayer.is_moving then addToLog("Player stopped moving") end
+		FearPlayer.is_moving = false
+		return FearPlayer.is_moving
+	else
+		FearPlayer.position.old.x = FearPlayer.position.current.x
+		FearPlayer.position.old.y = FearPlayer.position.current.y
+		FearPlayer.position.old.z = FearPlayer.position.current.z
+
+		if not FearPlayer.is_moving then addToLog("Player is moving") end
+		FearPlayer.is_moving = true
+		return FearPlayer.is_moving
+	end
+end
+
+function FearPlayer.CastingCheck() -- WORKING
+	local dirtyValue = LabelGetText("LayerTimerWindowCastTimerTimeText")
+
+	if dirtyValue == L"0.0s" or dirtyValue == L"" then
+		if FearPlayer.is_casting then addToLog("Player casting stopped") end
+		FearPlayer.is_casting = false
+		return FearPlayer.is_casting
+	else
+	
+		if FearPlayer.cast_timer.current >= 10 then
+			FearPlayer.cast_timer.current = 0
+			LabelSetText("LayerTimerWindowCastTimerTimeText", L"0.0s")
+
+			if FearPlayer.is_casting then addToLog("Player casting stopped") end
+			FearPlayer.is_casting = false
+			return FearPlayer.is_casting
+		end
+		if not FearPlayer.is_casting then addToLog("Player is casting") end
+		FearPlayer.is_casting = true
+		return FearPlayer.is_casting
+		
+	end
+end
+
 
 function FearPlayer.HasActionPoints(value) 
     return GameData.Player.actionPoints.current >= value
@@ -153,14 +192,14 @@ function FearPlayer.GetEquipmentData()
     end
 end
 
-function FearPlayer.HeathCheck()
+function FearPlayer.HeathCheck() --Broken
 	local player = GetPlayer()
     
 	--Try to heal or potion player is below threshold
-	if player.health < HEALTHTHRESHOLD.health then
-		if FearPlayer.can_heal and (ability.apCost < player.actionPoints) then
+	if player.health < Fear.ENV.HEALTHTHRESHOLD.heal then
+		if FearPlayer.CanHeal() and (ability.apCost < player.actionPoints) then
 
-		elseif FearPlayer.can_heal and (ability.apCost > player.actionPoints) then
+		elseif FearPlayer.CanHeal() and (ability.apCost > player.actionPoints) then
 			if FearPlayer.UseHealthPotion() then
 				FearTarget.Friendly(ability)
 			end
@@ -172,13 +211,13 @@ function FearPlayer.HeathCheck()
     return true
 end
 
-function FearPlayer.PotionCheck()
-	return false
+function FearPlayer.CanHeal() --WORKING
+	if FearCareer.db[GameData.Player.career.line].arch.heal then
+		return true
+	else
+		return false
+	end
 end
-
-function FearPlayer.UseHealthPotion()
-	
-end		
 
 function FearPlayer.CanResurrect(ability)
 	for _,resurrect_id in pairs(resurrect_abilities) do

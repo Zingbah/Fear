@@ -71,6 +71,7 @@ local fear_init = {
 	FearAbility,
 	FearShaman, 
 }
+
 local environment = {
 	"ENABLED", 
 	"TARGETINGMODE", 
@@ -113,19 +114,19 @@ Fear.language = Languages[SystemData.Settings.Language.active]
 Fear.support_mode_options = {"self", "group", "warband", "all"}
 
 -- Environment Default Setup
-Fear.ENV = {}
-Fear.ENV.ENABLED = false -- Turns Fear on or off
-Fear.ENV.TARGETINGMODE = {player = true, npc = false,}
-Fear.ENV.TARGETPREF = {health = true, distance = false,}
-Fear.ENV.SUPPORTMODE = "group"
-Fear.ENV.HEALTHTHRESHOLD = {heal=85, potion=40}
-Fear.ENV.SHOWWINDOW = false
-Fear.ENV.MODULESELECT = 1
-Fear.ENV.STAYONCAST = true
-Fear.ENV.VERSION = Fear.info.version
-Fear.ENV.MODULEACTIVE = 1
-Fear.ENV.LOS = false
-
+Fear.ENV = {
+	ENABLED = false, -- Turns Fear on or off
+	TARGETINGMODE = {player = true, npc = false,},
+	TARGETPREF = {health = true, distance = false,},
+	SUPPORTMODE = "all",
+	HEALTHTHRESHOLD = {heal=85, potion=40},
+	SHOWWINDOW = false,
+	MODULESELECT = 1,
+	STAYONCAST = true,
+	VERSION = Fear.info.version,
+	MODULEACTIVE = 1,
+	LOS = false,
+}
 --##############################################################
 -- Functions
 
@@ -133,16 +134,32 @@ Fear.ENV.LOS = false
 function Fear.OnInitialize() 
 
     -- If the WarExtDLL isn't running Fear won't work
-	if (WarExtDLLInfo) then 			
+	if (WarExtDLLInfo) then 
+		local item_count = 0
+		local item_total = #fear_init	
+		local item_not_loaded = nil	
 		verbose("Starting in VERBOSE mode")
 		verbose("Debug info will be written to log")
-        verbose("Loading "..tostring(#fear_init).." items")
+        verbose("Loading "..item_total.." items")
 
 		-- Initialize required classes
-        for k,v in pairs(fear_init) do
-            v.OnInitialize() 
+        for _,v in pairs(fear_init) do
+            if not v.OnInitialize() then
+            	if not item_not_loaded  then
+            		item_not_loaded = v
+            	else
+            		item_not_loaded = ", "..v
+            	end
+            end
+            item_count = item_count + 1
         end 
-        
+         
+         if item_count ~= item_total then
+         	verbose("ERROR: The following items did not load")
+         else
+         	verbose("All modules loaded!")
+         end
+
 		-- Setup savedVariables
         if Fear.SetupEnvironment() then
             verbose("Environment variables loaded")
@@ -153,12 +170,13 @@ function Fear.OnInitialize()
 			LibSlash.RegisterSlashCmd("fear", Fear.ToggleWindow())
 			LibSlash.RegisterSlashCmd("fear toggle", Fear.Toggle())
 		end
-		
-		-- Register Events 
+--[[		
+		-- Register Events That do not appear to work...?
+
 --	    RegisterEventHandler(SystemData.Events.RELOAD_INTERFACE, "NerfedUtils.doHooks" ) 
 		RegisterEventHandler(SystemData.Events.LOADING_END, "Fear.SetupEnvironment" )
 
-		RegisterEventHandler(SystemData.Events.PLAYER_POSITION_UPDATED, "FearPlayer.OnMove")
+--		RegisterEventHandler(SystemData.Events.PLAYER_POSITION_UPDATED, "FearPlayer.OnMove") - Doesn't work?
 
 		RegisterEventHandler(SystemData.Events.PLAYER_NEW_ABILITY_LEARNED, "Fear.RefreshEnvironment" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_ABILITIES_LIST_UPDATED, "Fear.RefreshEnvironment" )
@@ -167,7 +185,7 @@ function Fear.OnInitialize()
 	    RegisterEventHandler(SystemData.Events.PLAYER_END_CAST, "FearPlayer.OnEndCast" )
 		
 		RegisterEventHandler(SystemData.Events.PLAYER_ZONE_CHANGED, "FearPlayer.OnZoneChange")
---[[	
+	
 		RegisterEventHandler(SystemData.Events.GROUP_UPDATED, "FearPlayer.OnGroupUpdate")
 	    RegisterEventHandler(SystemData.Events.SCENARIO_BEGIN, "FearPlayer.OnGroupUpdate")
 	    RegisterEventHandler(SystemData.Events.SCENARIO_END, "FearPlayer.OnGroupUpdate")
@@ -222,23 +240,24 @@ function Fear.OnInitialize()
 		RegisterEventHandler (SystemData.Events.PLAYER_TARGET_EFFECTS_UPDATED, "Enemy.Groups_OnPlayerTargetEffectsUpdated")
 		RegisterEventHandler (SystemData.Events.PLAYER_EFFECTS_UPDATED, "Enemy.Groups_OnCurrentPlayerEffectsUpdated")
 		RegisterEventHandler (SystemData.Events.GROUP_EFFECTS_UPDATED, "Enemy.Groups_OnGroupEffectUpdated")
-	
+
 	    
 --]]	
+
 		say(Fear.info.name..", "..Fear.info.version.." started succesfully")
 		return true
 	else
-        ENABLE = false
+        Fear.ENV.ENABLE = false
 		say("WarExtDLL doesn't appear to be injected exiting...")
 		return false
 	end
 end
 
 function Fear.OnUpdate(elapsed) 
-	if not ENABLED then
+	if not Fear.ENV.ENABLED then
 		return false
 	end
-	 
+	
     if FearAbility.cast_time > 0 then
         FearAbility.cast_time = FearAbility.cast_time - elapsed
 
@@ -251,121 +270,29 @@ function Fear.OnUpdate(elapsed)
     delay_throttle = delay_throttle - elapsed
 
     if delay_throttle > 0 then
-        return -- cut out early
+ --       return -- cut out early
     end	
-
-	if (FearPlayer.position.current_x ~=FearPlayer.position.last_x) or 
-       (FearPlayer.position.current_y ~= FearPlayer.position.last_y) then
-
-        if not FearPlayer.is_moving then 
-            addToLog("Player is moving") 
-        end
-
-        FearPlayer.position.last_x = FearPlayer.position.current_x
-        FearPlayer.position.last_y = FearPlayer.position.current_y
-        FearPlayer.is_moving = true
-    else
-        if FearPlayer.is_moving then 
-            addToLog("Player stopped")
-        end
-
-        FearPlayer.is_moving = false
-    end
-	FearTarget.FriendlyLowestHealth()
---	Fear.Action()
+    FearPlayer.CastingCheck()
+	FearPlayer.MovingCheck()
+	FearTarget.Friendly()
+	Fear.Action()
 end
 
 function Fear.Action()
-
+--[[
 	if GetPlayer().health > 0 then
-		if not FearPlayer.is_casting and not STAYONCAST then 
+		if not FearPlayer.is_casting and not Fear.ENV.STAYONCAST then 
 			if FearAbility.Check() then
 			
 			end
 		end
 	end
+	]]	
 	return false	
 end
 
 function Fear.OnShutdown() -- Warhammer close events
 
-end
-
-function Fear.SetupEnvironment(reset, refresh)
-	-- Check for modules
-	if #FearCareer.modules < 1 then
-        ENABLED = false 
-        say("No modules for "..FearCareer.name.." exiting...")
-        return false
-	end
-	
-    if not MODULESELECT then
-        MODULESELECT = 1
-    end
-
-	-- Setup savedVariables	
-	if not refresh then
-		for _,v in pairs(environment) do -- Iterate of dynamic list of savedVariables
-			 -- Dynamicly assign savedVariable
-		
-		    if not saved_variable or reset then
-		        local default_variable = GetField("Fear.ENV."..v) -- Dynamicly assign environment variable                
-                SetField(v, default_variable)
-			else
-                local saved_variable = GetField(v)
-			    SetField("Fear.ENV."..v, saved_variable)
-            end
-		end
-		
-		if reset then
-			verbose("Saved variables reset to default")
-		else
-			addToLog("Saved variables loaded")
-		end		
-	end
-	
-	
-	--Identify if player is dps or support and set a default
-	if not SUPPORTMODE or reset then
-		if FearCareer.db[GameData.Player.career.line].arch.heal then
-			FearPlayer.can_heal = true
-			SUPPORTMODE = "group"
-		else
-			FearPlayer.can_heal = false
-			SUPPORTMODE = false
-		end
-	end
-	
-    -- Load ability cache
-    if not FearAbility.storage.abilities or refresh then FearAbility.Collect() end
-    
-	-- Create friendy target entity string
-	if FearTarget.CreateFriendlyEntityString() then
-		if reset or refresh then
-			addToLog("Friendly target string recreated")            
-		else
-			addToLog("Friendly target string created")
-		end
-	else
-        ENABLED = false
-		verbose("FRIENDLY TARGET STRING FAILED!")
-        return false	
-    end
-    
-    -- Get player GUID if required
-    if not FearPlayer.GUID then
-        FearPlayer.GUID = GetPlayer().GUID
-    end
-	
-	return true
-end
-
-function Fear.ResetEnvironment()
-	Fear.setupEnvironment(true)
-end
-
-function Fear.RefreshEnvironment()
-	Fear.setupEnvironment(false, true)
 end
 
 function Fear.Toggle()
@@ -377,8 +304,9 @@ function Fear.ToggleWindow()
 end
 
 function Fear.Test() -- Testing using the Fear window Test button
-	local curCD,maxCD = GetHotbarCooldown(1903)
-	addToLog("curCD="..tostring(curCD).." | maxCD="..tostring(maxCD))
+	ObjectInspector.ShowWindow()
+--	local curCD,maxCD = GetHotbarCooldown(1903)
+--	addToLog("curCD="..tostring(curCD).." | maxCD="..tostring(maxCD))
 --	ShowPlayer()
 --	addToLog("GameData.Player.career.id="..GameData.Player.career.id)
 --	ShowAbilityData((14406)
@@ -418,3 +346,80 @@ function Fear.TypeCheck(value, check_type, desc)
    end   
 end
 
+function Fear.SetupEnvironment(reset, refresh)
+	-- Check for modules
+	if #FearCareer.modules < 1 then
+        Fear.ENV.ENABLED = false 
+        say("No modules for "..FearCareer.name.." exiting...")
+        return false
+    else
+    	Fear.ENV.ENABLED = true
+	end
+	
+    if not Fear.ENV.MODULESELECT then
+        Fear.ENV.MODULESELECT = 1
+    end
+
+	-- Setup savedVariables	
+	if not refresh then
+		for n,v in pairs(Fear.ENV) do -- Iterate of dynamic list of savedVariables
+			 -- Dynamicly assign savedVariable
+		
+		    if not saved_variable or reset then              
+                SetField(n, v)
+			else
+                local saved_variable = GetField(v)
+			    SetField(v, saved_variable)
+            end
+		end
+		
+		if reset then
+			verbose("Saved variables reset to default")
+		else
+			addToLog("Saved variables loaded")
+		end		
+	end
+	
+	
+	--Identify if player is dps or support and set a default
+	if not Fear.ENV.SUPPORTMODE or reset then
+		if FearCareer.db[GameData.Player.career.line].arch.heal then
+			FearPlayer.can_heal = true
+			Fear.ENV.SUPPORTMODE = "all"
+		else
+			FearPlayer.can_heal = false
+			Fear.ENV.SUPPORTMODE = false
+		end
+	end
+	
+    -- Load ability cache
+    if not FearAbility.storage.abilities or refresh then FearAbility.Collect() end
+    
+	-- Create friendy target entity string
+	if FearTarget.CreateFriendlyEntityString() then
+		if reset or refresh then
+			addToLog("Friendly target string recreated")            
+		else
+			addToLog("Friendly target string created")
+		end
+	else
+        Fear.ENV.ENABLED = false
+		addToLog("FRIENDLY TARGET STRING FAILED!")
+        return false	
+    end
+    
+    -- Get player GUID if required
+    if not FearPlayer.GUID then
+        FearPlayer.GUID = GetPlayer().GUID
+    end
+	
+	return true
+end
+
+function Fear.ResetEnvironment()
+	return Fear.SetupEnvironment(true)
+end
+
+function Fear.RefreshEnvironment()
+	return Fear.SetupEnvironment(false, true)
+end

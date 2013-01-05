@@ -1,17 +1,17 @@
 FearAbility = {
-	info ={
-		program = Fear.info.program,
-		name = "Ability",
-		version = 0.1,
-		author = "Zingbah"
-	}
+    info ={
+        program = Fear.info.program,
+        name = "Ability",
+        version = 0.1,
+        author = "Zingbah"
+    }
 }
 
 --##############################################################
 -- Local Variables and Functions
 
 local info = FearAbility.info.name..", "..FearAbility.info.version
-local last_morale_ability_cast	= -1
+local last_morale_ability_cast  = -1
 local non_abilities = {245, 0, 8237}
 
 local function say(str) Fear.Say(str) end
@@ -31,7 +31,7 @@ FearAbility.cast_time = 0
 -- Functions
 
 function FearAbility.OnInitialize()
-	verbose(info.. " loaded succesfully")
+    verbose(info.. " loaded succesfully")
 end
 
 function FearAbility.Check(ability_type)
@@ -43,29 +43,29 @@ function FearAbility.Check(ability_type)
 end
 
 function FearAbility.IsReady(ability)
-	if ability and IsAbilityEnabled(ability.id) and not FearAbility.OnCooldown(ability) then
+    if ability and IsAbilityEnabled(ability.id) and not FearAbility.OnCooldown(ability) then
         return true
-	else
-		return false
-	end	
+    else
+        return false
+    end 
 end
 
 function FearAbility.OnCooldown(ability)
     changeHotbar(hotbar_test_slot, ability.id)
-    local cooldown = GetHotbarCooldown(hotbar_test_slot)	
-	local global_cooldown = GetGCD()
+    local cooldown = GetHotbarCooldown(hotbar_test_slot)    
+    local global_cooldown = GetGCD()
 
     return cooldown and (cooldown > global_cooldown + 0.1)
 end
 
 function FearAbility.IsUseful(ability)
-	local is_useful = true
-	
-	for _,non_ability in pairs(non_abilities) do
-		if non_ability.id == ability.id then
-			is_useful = false
-		end
-	end
+    local is_useful = true
+    
+    for _,non_ability in pairs(non_abilities) do
+        if non_ability.id == ability.id then
+            is_useful = false
+        end
+    end
 end
 
 function FearAbility.IsAbility(ability)
@@ -79,52 +79,52 @@ function FearAbility.IsItem(item)
 end
 
 function FearAbility.RequiresGroupMember(ability)
-	if ability.id == nil or ability.id == 0 then
-		return false
-	end
+    if ability.id == nil or ability.id == 0 then
+        return false
+    end
 
-	local rst = {}
-	rst[1], rst[2], rst[3] = ability.tooltip.English.requirements
-	local name = "group"
+    local rst = {}
+    rst[1], rst[2], rst[3] = ability.tooltip.English.requirements
+    local name = "group"
 
-	for i = 1,3,1 do
-		if rst[i] ~= nil and rst[i] ~= L"" then
-			local this = tostring(rst[i])
-			if string.find(name, this) then
-				return true
-			end
-		end
-	end
-	return false
+    for i = 1,3,1 do
+        if rst[i] ~= nil and rst[i] ~= L"" then
+            local this = tostring(rst[i])
+            if string.find(name, this) then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 --##############################################################
 -- Abilities parser code modified from WarCache
 
 function FearAbility.GetObjectDetails(obj, objName, targetDepth, previousDepth)
-	local contents = ""
-	local currentDepth = previousDepth + 1
+    local contents = ""
+    local currentDepth = previousDepth + 1
 
-	if type(obj) == "table" and (targetDepth == 0 or targetDepth >= currentDepth) then 
+    if type(obj) == "table" and (targetDepth == 0 or targetDepth >= currentDepth) then 
 
-		if temporary_object_list[tostring(obj)] then
-			return "Endless Loop detected on object ["..tostring(objName).."]\n"
-		else
-			temporary_object_list[tostring(obj)] = true
-		end
+        if temporary_object_list[tostring(obj)] then
+            return "Endless Loop detected on object ["..tostring(objName).."]\n"
+        else
+            temporary_object_list[tostring(obj)] = true
+        end
 
-		for k, a in pairs(obj) do
-			contents = contents..FearAbility.GetObjectDetails(a, tostring(objName).."."..tostring(k), targetDepth, currentDepth)
-		end
-	else
-		contents = tostring(objName).." = "
-		if type(obj) == "wstring" then
-			contents = contents.."\""..tostring(obj).."\"\n"
-		else
-			contents = contents..tostring(obj).."\n"
-		end
-	end
-	return contents
+        for k, a in pairs(obj) do
+            contents = contents..FearAbility.GetObjectDetails(a, tostring(objName).."."..tostring(k), targetDepth, currentDepth)
+        end
+    else
+        contents = tostring(objName).." = "
+        if type(obj) == "wstring" then
+            contents = contents.."\""..tostring(obj).."\"\n"
+        else
+            contents = contents..tostring(obj).."\n"
+        end
+    end
+    return contents
 end
 
 function FearAbility.GetAbilityCastTimeText (abilityData)
@@ -245,13 +245,13 @@ function FearAbility.GetAbilityCooldownText( cooldown )
 end
 
 function FearAbility.Reset()
-	FearAbility.Storage.abilities = {}
-	FearAbility.Storage.items = {}
+    FearAbility.Storage.abilities = {}
+    FearAbility.Storage.items = {}
 end
 
 function FearAbility.Collect()
 
-	local language = Fear.language	
+    local language = Fear.language  
     local extracted_abilities = {}
     local current_ability_data = TableMerge(GetAbilityTable(GameData.AbilityType.STANDARD), GetAbilityTable(GameData.AbilityType.MORALE)) 
     local no_rank = 5000
@@ -259,8 +259,8 @@ function FearAbility.Collect()
     current_ability_data = TableMerge(current_ability_data, FearCareer.modules[MODULESELECT].abilities)
     addToLog("Updating abilities")
 
-	-- extract the data
-	for key,data in pairs(current_ability_data) do
+    -- extract the data
+    for key,data in pairs(current_ability_data) do
         local db_index = 0
         local db_name = tostring(data.name)
 
@@ -320,30 +320,30 @@ function FearAbility.Collect()
         end
 
         table.insert(extracted_abilities, rank, abilityData)
-	end
+    end
 
     FearAbility.storage.abilities = extracted_abilities --TableMerge(current_ability_data, extracted_abilities)
 
     return extracted_abilities        
      
-	
-	-- store data in persistant cache
-	--
-	
-	-- gather metadata, like careerstats for additional calculations like statcontribution
-	--metaData = {}
-	--metaData.Language = {}
-	--metaData.Language.id = SystemData.Settings.Language.active
-	--metaData.Language.name = Languages[metaData.Language.id]
-	
-	--metaData.Player = {}
-	--metaData.Player.STRENGTH = GetBonus(GameData.BonusTypes.EBONUS_STRENGTH,GameData.Player.Stats[GameData.Stats.STRENGTH].baseValue)
-	--metaData.Player.BALLISTIC = GetBonus(GameData.BonusTypes.EBONUS_BALLISTICSKILL,GameData.Player.Stats[GameData.Stats.BALLISTICSKILL].baseValue)
-	--metaData.Player.INTELLIGENCE = GetBonus(GameData.BonusTypes.EBONUS_INTELLIGENCE,GameData.Player.Stats[GameData.Stats.INTELLIGENCE].baseValue)
-	--metaData.Player.WILLPOWER = GetBonus(GameData.BonusTypes.EBONUS_WILLPOWER,GameData.Player.Stats[GameData.Stats.WILLPOWER].baseValue)
-	
-	--FearAbility.Storage.abilities[string.gsub(tostring(GameData.Player.career.name), " ", "_")].meta = metaData
-	
-	
+    
+    -- store data in persistant cache
+    --
+    
+    -- gather metadata, like careerstats for additional calculations like statcontribution
+    --metaData = {}
+    --metaData.Language = {}
+    --metaData.Language.id = SystemData.Settings.Language.active
+    --metaData.Language.name = Languages[metaData.Language.id]
+    
+    --metaData.Player = {}
+    --metaData.Player.STRENGTH = GetBonus(GameData.BonusTypes.EBONUS_STRENGTH,GameData.Player.Stats[GameData.Stats.STRENGTH].baseValue)
+    --metaData.Player.BALLISTIC = GetBonus(GameData.BonusTypes.EBONUS_BALLISTICSKILL,GameData.Player.Stats[GameData.Stats.BALLISTICSKILL].baseValue)
+    --metaData.Player.INTELLIGENCE = GetBonus(GameData.BonusTypes.EBONUS_INTELLIGENCE,GameData.Player.Stats[GameData.Stats.INTELLIGENCE].baseValue)
+    --metaData.Player.WILLPOWER = GetBonus(GameData.BonusTypes.EBONUS_WILLPOWER,GameData.Player.Stats[GameData.Stats.WILLPOWER].baseValue)
+    
+    --FearAbility.Storage.abilities[string.gsub(tostring(GameData.Player.career.name), " ", "_")].meta = metaData
+    
+    
 end
 
