@@ -45,68 +45,83 @@ function FearPlayer.OnInitialize()
 end
 
 function FearPlayer.OnZoneChange()
-	FearPlayer.GUID = GetPlayer().GUID
+	if Fear.ENV.ENABLED then
+		FearPlayer.GUID = GetPlayer().GUID
+	end
 end
 
-function FearPlayer.OnMove(x, y) -- Doesn't seem to work...
-		
+function FearPlayer.OnMove(x, y) 
+	if Fear.ENV.ENABLED then
+
+	end
 end
 
 function FearPlayer.OnBeginCast(abilityId, isChannel, desiredCastTime, averageLatency)
-    addToLog("Player is casting")    
-	FearAbility.is_casting = true
+	if Fear.ENV.ENABLED then
+		local abilityData = GetAbilityData(abilityId)
+	    addToLog(L"Player is casting "..abilityData.name)
+	    FearAbility.is_casting = true
+	end
 end
 
 function FearPlayer.OnCastSetback(new_cast_time)
-    if Fear.ENV.STAYONCAST and FearPlayer.cast_time ~= 0 then
-        FearPlayer.cast_time = new_cast_time
-    end
-	addToLog("Cast interupted")
+	if Fear.ENV.ENABLED then
+	    if Fear.ENV.STAYONCAST and FearPlayer.cast_time ~= 0 then
+	        FearPlayer.cast_time = new_cast_time
+	    end
+		addToLog("Cast disrupted")
+	end
 end
 
 function FearPlayer.OnEndCast(interupt)
-    if interupt and FearPlayer.is_casting then
-		FearPlayer.Cast(FearPlayer.last_cast)
-    end
-    
-    addToLog("Player end cast")
-    FearPlayer.is_casting = false
-    CastTime = 0
+	if Fear.ENV.ENABLED then
+	    if interupt then
+	--		FearPlayer.Cast(FearPlayer.last_cast)
+			addToLog("Cast Interupted")
+	    else
+		    if FearAbility.is_casting then
+		    	addToLog("Player end cast")
+		    end
+		end
+		FearPlayer.is_casting = false
+	end
 end
 
 function FearPlayer.OnGroupUpdate()
-	FearPlayer.in_warband = IsWarBandActive()
-	
-	if GameData.Player.isInSiege or GameData.Player.isInScenario then
-    	FearPlayer.in_scenario = true
-	else
-		FearPlayer.in_scenario = false
-	end
-	
-	if GetNumGroupmates() > 0 then
-		FearPlayer.in_group = true        
-	else
-		FearPlayer.in_group = false
-	end
-	
-	if FearPlayer.in_warband or FearPlayer.in_scenario or FearPlayer.in_group then
-		FearTarget.group_names = {}
-		local group_data = GetGroupData()
+	if Fear.ENV.ENABLED then
+		FearPlayer.in_warband = IsWarBandActive()
 		
-		for group_number,group_players in pairs(group_data) do
-			for _,group_players in pairs(group_player) do
-				if string.find(tostring(entity.name), tostring(group_player.name)) then
-					if string.find(tostring(FearPlayer.name), tostring(group_player.name)) then
-						FearPlayer.group = group_number
-					else
-						table.insert(FearTarget.group_info, {name = player.name, group = group_number})
+		if GameData.Player.isInSiege or GameData.Player.isInScenario then
+	    	FearPlayer.in_scenario = true
+		else
+			FearPlayer.in_scenario = false
+		end
+		
+		if GetNumGroupmates() > 0 then
+			FearPlayer.in_group = true        
+		else
+			FearPlayer.in_group = false
+		end
+		
+		if FearPlayer.in_warband or FearPlayer.in_scenario or FearPlayer.in_group then
+			FearTarget.group_names = {}
+			local group_data = GetGroupData()
+			
+			for group_number,group_players in pairs(group_data) do
+				for _,group_players in pairs(group_player) do
+					if string.find(tostring(entity.name), tostring(group_player.name)) then
+						if string.find(tostring(FearPlayer.name), tostring(group_player.name)) then
+							FearPlayer.group = group_number
+						else
+							table.insert(FearTarget.group_info, {name = player.name, group = group_number})
+						end
 					end
 				end
 			end
+			
+		else
+			FearTarget.group_names = {}
 		end
-		
-	else
-		FearTarget.group_names = {}
 	end
 end
 
@@ -124,49 +139,6 @@ end
 function FearPlayer.IsRVR() -- WORKING
     return GameData.Player.rvrZoneFlagged
 end
-
-function FearPlayer.MovingCheck() -- WORKING
-	FearPlayer.position.current = GetPlayerPosition()
-
-	if FearPlayer.position.current.x == FearPlayer.position.old.x and FearPlayer.position.current.y == FearPlayer.position.old.y and FearPlayer.position.current.z == FearPlayer.position.old.z then
-		if FearPlayer.is_moving then addToLog("Player stopped moving") end
-		FearPlayer.is_moving = false
-		return FearPlayer.is_moving
-	else
-		FearPlayer.position.old.x = FearPlayer.position.current.x
-		FearPlayer.position.old.y = FearPlayer.position.current.y
-		FearPlayer.position.old.z = FearPlayer.position.current.z
-
-		if not FearPlayer.is_moving then addToLog("Player is moving") end
-		FearPlayer.is_moving = true
-		return FearPlayer.is_moving
-	end
-end
-
-function FearPlayer.CastingCheck() -- WORKING
-	local dirtyValue = LabelGetText("LayerTimerWindowCastTimerTimeText")
-
-	if dirtyValue == L"0.0s" or dirtyValue == L"" then
-		if FearPlayer.is_casting then addToLog("Player casting stopped") end
-		FearPlayer.is_casting = false
-		return FearPlayer.is_casting
-	else
-	
-		if FearPlayer.cast_timer.current >= 10 then
-			FearPlayer.cast_timer.current = 0
-			LabelSetText("LayerTimerWindowCastTimerTimeText", L"0.0s")
-
-			if FearPlayer.is_casting then addToLog("Player casting stopped") end
-			FearPlayer.is_casting = false
-			return FearPlayer.is_casting
-		end
-		if not FearPlayer.is_casting then addToLog("Player is casting") end
-		FearPlayer.is_casting = true
-		return FearPlayer.is_casting
-		
-	end
-end
-
 
 function FearPlayer.HasActionPoints(value) 
     return GameData.Player.actionPoints.current >= value

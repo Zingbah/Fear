@@ -151,37 +151,33 @@ function Fear.OnInitialize()
             	item_count = item_count + 1
             end
         end 
-         
-         if item_count == item_total then
-         	verbose("All modules loaded!")
-         end
 
 		-- Setup savedVariables
         if Fear.SetupEnvironment() then
             verbose("Environment variables loaded")
+        else
+        	verbose("ERROR loading Environment variables")
         end
         
-        -- Add LibSlash info
-		if LibSlash then
-			LibSlash.RegisterSlashCmd("fear", Fear.ToggleWindow())
-			LibSlash.RegisterSlashCmd("fear toggle", Fear.Toggle())
-		end
---[[		
-		-- Register Events That do not appear to work...?
-
---	    RegisterEventHandler(SystemData.Events.RELOAD_INTERFACE, "NerfedUtils.doHooks" ) 
-		RegisterEventHandler(SystemData.Events.LOADING_END, "Fear.SetupEnvironment" )
-
---		RegisterEventHandler(SystemData.Events.PLAYER_POSITION_UPDATED, "FearPlayer.OnMove") - Doesn't work?
-
+	    RegisterEventHandler(SystemData.Events.PLAYER_POSITION_UPDATED, "FearPlayer.OnMove")
 		RegisterEventHandler(SystemData.Events.PLAYER_NEW_ABILITY_LEARNED, "Fear.RefreshEnvironment" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_ABILITIES_LIST_UPDATED, "Fear.RefreshEnvironment" )
-
-		RegisterEventHandler(SystemData.Events.PLAYER_BEGIN_CAST, "FearPlayer.OnBeginCast" )
+	    RegisterEventHandler(SystemData.Events.PLAYER_BEGIN_CAST, "FearPlayer.OnBeginCast" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_END_CAST, "FearPlayer.OnEndCast" )
+	    RegisterEventHandler(SystemData.Events.PLAYER_ZONE_CHANGED, "FearPlayer.OnZoneChange")
+
+
+--[[		
+	    
+--	    RegisterEventHandler(SystemData.Events.RELOAD_INTERFACE, "NerfedUtils.doHooks" ) 
+		 RegisterEventHandler(SystemData.Events.LOADING_END, "Fear.SetupEnvironment" )
+
+
+--		
+
+
 		
-		RegisterEventHandler(SystemData.Events.PLAYER_ZONE_CHANGED, "FearPlayer.OnZoneChange")
-	
+		
 		RegisterEventHandler(SystemData.Events.GROUP_UPDATED, "FearPlayer.OnGroupUpdate")
 	    RegisterEventHandler(SystemData.Events.SCENARIO_BEGIN, "FearPlayer.OnGroupUpdate")
 	    RegisterEventHandler(SystemData.Events.SCENARIO_END, "FearPlayer.OnGroupUpdate")
@@ -240,7 +236,7 @@ function Fear.OnInitialize()
 	    
 --]]	
 
-		say(Fear.info.name.." is REAL")
+		say(Fear.info.program.." is loaded")
 		return true
 	else
         Fear.ENV.ENABLE = false
@@ -250,28 +246,27 @@ function Fear.OnInitialize()
 end
 
 function Fear.OnUpdate(elapsed) 
-	if not Fear.ENV.ENABLED then
-		return false
+	if Fear.ENV.ENABLED then
+	 --[[
+	    if FearAbility.cast_time > 0 then
+	        FearAbility.cast_time = FearAbility.cast_time - elapsed
+
+	        if FearAbility.cast_time <= 0 then
+	            FearAbility.cast_time = 0
+	            FearAbility.is_casting = false
+	        end
+	    end
+	    
+	    delay_throttle = delay_throttle - elapsed
+
+	    if delay_throttle > 0 then
+	 --       return -- cut out early
+	    end	
+	   ]]
+		FearTarget.Friendly()
+		FearTarget.Hostile()
+		Fear.Action()
 	end
-	
-    if FearAbility.cast_time > 0 then
-        FearAbility.cast_time = FearAbility.cast_time - elapsed
-
-        if FearAbility.cast_time <= 0 then
-            FearAbility.cast_time = 0
-            FearAbility.is_casting = false
-        end
-    end
-    
-    delay_throttle = delay_throttle - elapsed
-
-    if delay_throttle > 0 then
- --       return -- cut out early
-    end	
-    FearPlayer.CastingCheck()
-	FearPlayer.MovingCheck()
-	FearTarget.Friendly()
-	Fear.Action()
 end
 
 function Fear.Action()
@@ -391,18 +386,7 @@ function Fear.SetupEnvironment(reset, refresh)
     -- Load ability cache
     if not FearAbility.storage.abilities or refresh then FearAbility.Collect() end
 	-- Create friendy target entity string
-	if FearTarget.CreateFriendlyEntityString() then
-		if reset or refresh then
-			addToLog("Friendly target string recreated")            
-		else
-			addToLog("Friendly target string created")
-		end
-	else
-        Fear.ENV.ENABLED = false
-		addToLog("FRIENDLY TARGET STRING FAILED!")
-        return false	
-    end
-    
+	
     -- Get player GUID if required
     if not FearPlayer.GUID then
         FearPlayer.GUID = GetPlayer().GUID

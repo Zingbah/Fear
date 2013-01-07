@@ -20,13 +20,16 @@ local function addToDebug(str) Fear.Debug(str) end
 
 --##############################################################
 -- Variables
-FearTarget.last_known_hostile = false
+FearTarget.last_known_hostile = {}
+FearTarget.last_known_hostile_old = {GUID=0}
+FearTarget.last_known_friendly = {}
+FearTarget.last_known_friendly_old = {GUID=0}
 FearTarget.entity_list = {friendly = {}, hostile = {}}
 FearTarget.search_radius = 300
 FearTarget.heal_radius = 150
 FearTarget.dps_radius = 100
-FearTarget.friendly_entity_string = nil
-FearTarget.hostile_entity_string = nil
+FearTarget.friendly_entity_string = "friendly,alive,player,los,alive,maxdistance=150"
+FearTarget.hostile_entity_string = "hostile,alive,player,los,maxdistance=100"
 FearTarget.dots = {}
 FearTarget.rating = {
 	-- 0 = lowest to 1 = highest
@@ -60,9 +63,10 @@ function FearTarget.Friendly()
     if table.maxn(entity_list) > 0 then
         for GUID,entity in pairs(entity_list) do
             if entity.healthPercent < Fear.ENV.HEALTHTHRESHOLD.heal then
-            	if not FearTarget.last_known_friendly or (entity.name ~= FearTarget.last_known_friendly.name and entity.healthPercent ~= FearTarget.last_known_friendly.healthPercent) then
-            		FearTarget.last_known_friendly = entity
-					addToLog("Friendly Low Health: "..tostring(FearTarget.last_known_friendly.name).." ["..FearTarget.last_known_friendly.healthPercent.."]")
+            	FearTarget.last_known_friendly = entity
+            	if FearTarget.last_known_friendly.GUID ~= FearTarget.last_known_friendly_old.GUID then
+					addToLog("Friendly: "..tostring(FearTarget.last_known_friendly.name).." ["..FearTarget.last_known_friendly.healthPercent.."]")
+					FearTarget.last_known_friendly_old = FearTarget.last_known_friendly
 				end
                 if #FearPlayer.group_info > 0 then
                     for _,group_player in pairs(FearPlayer.group_info) do
@@ -82,6 +86,21 @@ function FearTarget.Friendly()
     end	
 end
 
+function FearTarget.Hostile()
+	   	-- Create a support target list based on player's priorities
+    local entity_list = EntityList(FearTarget.hostile_entity_string)
+    table.sort(entity_list, FearTarget.SortByHealth)
+   
+    if table.maxn(entity_list) > 0 then
+        for GUID,entity in pairs(entity_list) do
+        	FearTarget.last_known_hostile = entity
+        	if  FearTarget.last_known_hostile.GUID ~= FearTarget.last_known_hostile_old.GUID then
+				addToLog("Hostile: "..tostring(FearTarget.last_known_hostile.name).." ["..FearTarget.last_known_hostile.healthPercent.."]")
+				FearTarget.last_known_hostile_old = FearTarget.last_known_hostile
+			end
+        end
+    end	
+end
 
 
 function FearTarget.IsDead(entity)
@@ -124,7 +143,7 @@ function FearTarget.HasDots(GUID,ability)
 end
 
 function FearTarget.CreateFriendlyEntityString()
-	entity_str ="friendly,"
+	entity_str ="friendly,alive,player,los,alive,maxdistance=150"
 	
 	if Fear.ENV.SUPPORTMODE ~= "dps" then
 		entity_str = entity_str .. "player,"
@@ -144,7 +163,7 @@ function FearTarget.CreateFriendlyEntityString()
 		entity_str =  entity_str .. "maxdistance=150"
 	end	
 	
-	FearTarget.friendly_entity_string = entity_str
+--	FearTarget.friendly_entity_string = entity_str
 
 	return true	
 end
@@ -160,7 +179,7 @@ function FearTarget.FriendlyEntities()
 end
 
 function FearTarget.CreateHostileEntityString()
-	entity_str ="hostile,alive,"
+	entity_str ="hostile,alive,player,los,maxdistance=100"
 	
 	if Fear.ENV.SUPPORTMODE ~= "dps" then
 		entity_str = entity_str .. "player,"
@@ -177,7 +196,7 @@ function FearTarget.CreateHostileEntityString()
 		entity_str =  entity_str .. "maxdistance=100"
 	end	
 	
-	FearTarget.hostile_entity_string = entity_str
+--	FearTarget.hostile_entity_string = entity_str
 	
 	return true	
 end	

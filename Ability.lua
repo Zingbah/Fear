@@ -171,7 +171,7 @@ function FearAbility.GetAbilityCostText (abilityData)
             local params = { apCost }
             
             if (abilityData.hasAPCostPerSecond)
-            then
+            then 
                 return (GetStringFormat (StringTables.Default.LABEL_ABILITY_TOOLTIP_AP_COST_PER_SECOND, params))
             else
                 return (GetStringFormat (StringTables.Default.LABEL_ABILITY_TOOLTIP_ACTION_POINT_COST, params))
