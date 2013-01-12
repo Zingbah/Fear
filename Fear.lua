@@ -265,21 +265,31 @@ function Fear.OnUpdate(elapsed)
 	   ]]
 		FearTarget.Friendly()
 		FearTarget.Hostile()
+		FearPlayer.isMoving()
 		Fear.Action()
 	end
 end
 
 function Fear.Action()
---[[
-	if GetPlayer().health > 0 then
-		if not FearPlayer.is_casting and not Fear.ENV.STAYONCAST then 
-			if FearAbility.Check() then
-			
+	for _,rating in pairs(FearAbility.sorted_keys) do
+		ability = FearAbility.storage.abilities[rating]
+		Target(FearTarget.last_known_friendly.GUID)
+		Target(FearTarget.last_known_hostile.GUID)
+
+		if not FearAbility.is_casting  then
+			--addToLog(tostring(ability.name)..": "..rating)		
+			if FearTarget.last_known_friendly.GUID then
+				Cast(ability.id)
+				return true
+			end
+
+			if FearTarget.last_known_hostile.GUID  then
+				Cast(ability.id)
+				return true
 			end
 		end
 	end
-	]]	
-	return false	
+	
 end
 
 function Fear.OnShutdown() -- Warhammer close events
@@ -295,6 +305,7 @@ function Fear.ToggleWindow()
 end
 
 function Fear.Test() -- Testing using the Fear window Test button
+--	Cast(1898)
 	ObjectInspector.ShowWindow()
 --	local curCD,maxCD = GetHotbarCooldown(1903)
 --	addToLog("curCD="..tostring(curCD).." | maxCD="..tostring(maxCD))

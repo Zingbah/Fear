@@ -24,7 +24,8 @@ local function addToDebug(str) Fear.Debug(str) end
 -- Variables
 
 FearAbility.current_ability = nil
-FearAbility.storage = {abilities, items = false}
+FearAbility.storage = {abilities, items = false,}
+FearAbility.sorted_keys = {}
 FearAbility.cast_time = 0
 
 --##############################################################
@@ -246,8 +247,9 @@ function FearAbility.GetAbilityCooldownText( cooldown )
 end
 
 function FearAbility.Reset()
-    FearAbility.Storage.abilities = {}
-    FearAbility.Storage.items = {}
+    FearAbility.storage.abilities = {}
+    FearAbility.storage.items = {}
+    FearAbility.storage.abilities = {}
 end
 
 function FearAbility.Collect()
@@ -323,15 +325,18 @@ function FearAbility.Collect()
                 rating = no_rating
                 no_rating = no_rating + 1
             end
-
+            table.insert (FearAbility.sorted_keys, rating)
             table.insert(extracted_abilities, rating, abilityData)
         end
     end
-    addToLog("Abilities Updated")
 
     FearAbility.storage.abilities = extracted_abilities --TableMerge(current_ability_data, extracted_abilities)
+    
+    table.sort(FearAbility.sorted_keys)
+   
+    addToLog("Abilities Updated")
 
-    return extracted_abilities        
+    return FearAbility.storage.abilities        
      
     
     -- store data in persistant cache

@@ -31,6 +31,7 @@ FearTarget.dps_radius = 100
 FearTarget.friendly_entity_string = "friendly,alive,player,los,alive,maxdistance=150"
 FearTarget.hostile_entity_string = "hostile,alive,player,los,maxdistance=100"
 FearTarget.dots = {}
+FearTarget.hots = {}
 FearTarget.rating = {
 	-- 0 = lowest to 1 = highest
 	friend = {tank = .8, heal = .6, damage = .5},
@@ -64,15 +65,11 @@ function FearTarget.Friendly()
         for GUID,entity in pairs(entity_list) do
             if entity.healthPercent < Fear.ENV.HEALTHTHRESHOLD.heal then
             	FearTarget.last_known_friendly = entity
-            	if FearTarget.last_known_friendly.GUID ~= FearTarget.last_known_friendly_old.GUID then
-					addToLog("Friendly: "..tostring(FearTarget.last_known_friendly.name).." ["..FearTarget.last_known_friendly.healthPercent.."]")
-					FearTarget.last_known_friendly_old = FearTarget.last_known_friendly
-				end
                 if #FearPlayer.group_info > 0 then
                     for _,group_player in pairs(FearPlayer.group_info) do
                         if string.find(tostring(entity.name), tostring(group_player.name)) then
                             if Fear.ENV.SUPPORTMODE == "group" then
-                                if group_player.group == FearPlayer.group then
+                               	if group_player.group == FearPlayer.group then
                                     entity.inGroup = true
                                     entity.inWarband = true
                                     table.insert(FearTarget.entity_list.friendly, entity)
@@ -81,6 +78,12 @@ function FearTarget.Friendly()
                         end
                     end
                 end
+            	if FearTarget.last_known_friendly.GUID ~= FearTarget.last_known_friendly_old.GUID then
+					--addToLog("Friendly: "..tostring(FearTarget.last_known_friendly.name).." ["..tostring(FearTarget.last_known_friendly.healthPercent).."%]")
+					FearTarget.last_known_friendly_old = FearTarget.last_known_friendly
+            	else
+            		FearTarget.last_known_friendly = {}
+				end
             end
         end
     end	
@@ -95,8 +98,10 @@ function FearTarget.Hostile()
         for GUID,entity in pairs(entity_list) do
         	FearTarget.last_known_hostile = entity
         	if  FearTarget.last_known_hostile.GUID ~= FearTarget.last_known_hostile_old.GUID then
-				addToLog("Hostile: "..tostring(FearTarget.last_known_hostile.name).." ["..FearTarget.last_known_hostile.healthPercent.."]")
+				--addToLog("Hostile: "..tostring(FearTarget.last_known_hostile.name).." ["..tostring(FearTarget.last_known_hostile.healthPercent).."%]")
 				FearTarget.last_known_hostile_old = FearTarget.last_known_hostile
+			else
+				FearTarget.last_known_hostile = {}
 			end
         end
     end	

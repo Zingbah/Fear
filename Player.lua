@@ -19,15 +19,14 @@ local function addToDebug(str) Fear.Debug(str) end
 
 --##############################################################
 -- Variables
-FearPlayer.position = {current = GetPlayerPosition(), old = {x = 0, y = 0, z = 0,}}
+FearPlayer.position = {current = GetPlayerPosition(), track = {x=0,y=0,z=0}}
 FearPlayer.cast_timer = {current = 0, old = L"0.0s"}
 FearPlayer.guid = 0
 FearPlayer.name = GameData.Player.name
 FearPlayer.group_data = nil
 FearPlayer.can_resurrect = false
-FearPlayer.is_casting = false
 FearPlayer.in_group = false
-FearPlayer.is_moving = true
+FearPlayer.is_moving = false
 FearPlayer.in_scenario = false
 FearPlayer.in_warband = false
 FearPlayer.group_info = {}
@@ -52,13 +51,31 @@ end
 
 function FearPlayer.OnMove(x, y) 
 	if Fear.ENV.ENABLED then
+		FearPlayer.position.current.x = x
+		FearPlayer.position.current.y= y
+	end
+end
 
+function FearPlayer.isMoving()
+	if FearPlayer.position.track.x == FearPlayer.position.current.x and FearPlayer.position.track.y == FearPlayer.position.current.y then
+		if FearPlayer.is_moving then 
+			addToLog("Player stopped")
+		end
+		FearPlayer.is_moving = false
+	else
+		if not FearPlayer.is_moving then
+			addToLog("Player is moving")
+		end
+		FearPlayer.position.track = GetPlayerPosition()
+		FearPlayer.is_moving = true
 	end
 end
 
 function FearPlayer.OnBeginCast(abilityId, isChannel, desiredCastTime, averageLatency)
 	if Fear.ENV.ENABLED then
 		local abilityData = GetAbilityData(abilityId)
+		FearPlayer.last_cast = abilityData
+
 	    addToLog(L"Player is casting "..abilityData.name)
 	    FearAbility.is_casting = true
 	end
@@ -76,11 +93,11 @@ end
 function FearPlayer.OnEndCast(interupt)
 	if Fear.ENV.ENABLED then
 	    if interupt then
-	--		FearPlayer.Cast(FearPlayer.last_cast)
+			Cast(FearPlayer.last_cast.id)
 			addToLog("Cast Interupted")
 	    else
 		    if FearAbility.is_casting then
-		    	addToLog("Player end cast")
+		    	--addToLog("Player end cast")
 		    end
 		end
 		FearPlayer.is_casting = false
@@ -123,17 +140,6 @@ function FearPlayer.OnGroupUpdate()
 			FearTarget.group_names = {}
 		end
 	end
-end
-
-function FearPlayer.Cast(ability,GUID)
-	if FearAbility.Check(ability,GUID) then
-		Cast(ability.id)
-		FearPlayer.last_cast = ability
-		addToLog("Casting ".. ability.name .." on ".. Target(GUID).name)
-		return true
-	else
-		return false
-	end				
 end
 
 function FearPlayer.IsRVR() -- WORKING

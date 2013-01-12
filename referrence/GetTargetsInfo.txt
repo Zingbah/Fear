@@ -1,0 +1,22 @@
+Index.1 Friendly
+Index.2 enemy
+TargetType= 3 player
+TargetType= 2 npc
+
+
+GetTargets().1.GUID = 527
+GetTargets().1.LOS = 1
+GetTargets().1.Distance = 410
+GetTargets().1.TargetType = 3
+GetTargets().2.GUID = 556
+GetTargets().2.LOS = 1
+GetTargets().2.Distance = 746
+GetTargets().2.TargetType = 5
+GetTargets().3.GUID = 0
+GetTargets().3.LOS = 1
+GetTargets().3.Distance = 0
+GetTargets().3.TargetType = 0
+GetTargets().0.GUID = 556
+GetTargets().0.LOS = 1
+GetTargets().0.Distance = 746
+GetTargets().0.TargetType = 5

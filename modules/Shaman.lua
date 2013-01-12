@@ -40,7 +40,7 @@ FearShaman.career_module = {
 		[1898]  = {id = 1898,  name = "Gork'll Fix It", 				rank = 1, rating = 15, maxHealth = 95, minHealth = 0,},
 		[1908]  = {id = 1908,  name = "Gedup!", 						rank = 10, rating = 8,},
 		
---		[1912]  = {id = 1912,  name = "Bleed Fer' Me", 					rank = 6, rating = 17, maxHealth = 95, minHealth = 0,},
+		[1912]  = {id = 1912,  name = "Bleed Fer' Me", 					rank = 8, rating = 17, maxHealth = 95, minHealth = 0,},
 		[1930]  = {id = 1930,  name = "I'll Take That!", 				rank = 5, rating = 19, maxHealth = 95, minHealth = 0,},
 
 		[1900]  = {id = 1900,  name = "Life Leaka", 					rank = 2, rating = 52,},
