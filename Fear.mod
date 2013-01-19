@@ -49,17 +49,17 @@
             </Categories>
             <Careers>
                 <Career name="ARCHMAGE" />
-               <!--  <Career name="BLACKGUARD" />
+               <Career name="BLACKGUARD" />
                 <Career name="BLACK_ORC" /> -->
                 <Career name="BRIGHT_WIZARD" />
-               <!--  <Career name="CHOPPA" />
+               <Career name="CHOPPA" />
                 <Career name="CHOSEN" />
                 <Career name="DISCIPLE" />
                 <Career name="ENGINEER" />
                 <Career name="IRON_BREAKER" />
                 <Career name="KNIGHT" /> -->
                 <Career name="SHAMAN" />
-                <!-- <Career name="SQUIG_HERDER" />
+                <Career name="SQUIG_HERDER" />
                 <Career name="MAGUS" />
                 <Career name="MARAUDER" />
                 <Career name="RUNE_PRIEST" />

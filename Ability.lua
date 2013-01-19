@@ -14,6 +14,15 @@ local info = FearAbility.info.name..", "..FearAbility.info.version
 local last_morale_ability_cast  = -1
 local non_abilities = {245, 0, 8237}
 
+local function changeHotbar(barSlot, id)
+    if NerfedAPI.IsAbility(id) then
+        SetHotbarData(barSlot, GameData.PlayerActions.DO_ABILITY, id)
+    elseif NerfedAPI.IsItem(id) then
+        SetHotbarData(barSlot, GameData.PlayerActions.USE_ITEM, id)
+    else
+        d("NerfedEngine:changeHotbar:Invalid type of id")
+    end
+end
 local function say(str) Fear.Say(str) end
 local function alert(str) Fear.Alert(str) end
 local function verbose(str) Fear.Verbose(str) end
@@ -27,7 +36,26 @@ FearAbility.current_ability = nil
 FearAbility.storage = {abilities, items = false,}
 FearAbility.sorted_keys = {}
 FearAbility.cast_time = 0
-
+FearAbility.FEARBARTEST = 112
+FearAbility.TYPE = {
+    STANDARD    = GameData.AbilityType.STANDARD,
+    MORALE      = GameData.AbilityType.MORALE,
+    TACTIC      = GameData.AbilityType.TACTIC,    
+    GRANTED     = GameData.AbilityType.GRANTED,
+    PET         = GameData.AbilityType.PET,
+    PASSIVE     = GameData.AbilityType.PASSIVE,
+    GUILD       = GameData.AbilityType.GUILD
+}
+FearAbility.resurrect_ability = {
+    [1908] = GameData.CareerLine.SHAMAN, -- Gedup!
+    [9246] = GameData.CareerLine.ARCHMAGE, -- Gift Of Life
+    [1598] = GameData.CareerLine.RUNE_PRIEST, -- Rune Of Life
+    [697] = GameData.CareerLine.ZEALOT, -- Alter Fate
+    [1619] = GameData.CareerLine.RUNE_PRIEST, -- Grimnir's Fury
+    [8555] = GameData.CareerLine.ZEALOT, -- Tzeentch Shall Remake You
+    [8248] = GameData.CareerLine.WARRIOR_PRIEST, -- Breath Of Sigmar
+    [14526] = GameData.CareerLine.DISCIPLE, -- Rally
+}
 --##############################################################
 -- Functions
 
@@ -36,7 +64,7 @@ function FearAbility.OnInitialize()
 
 end
 
-function FearAbility.Check(ability_type)
+function FearAbility.Check(ability)
     for rating,ability in OrderedPairs(FearAbility.storage.abilities) do
         if FearAbility.IsReady(ability) then
             
@@ -44,20 +72,22 @@ function FearAbility.Check(ability_type)
     end
 end
 
+function FearAbility.OnCooldown(ability)
+    changeHotbar(FearAbility.FEARBARTEST, ability.id)
+    local cooldown = GetHotbarCooldown(FearAbility.FEARBARTEST)
+    -- update action data with cooldown information
+    ability.cooldown = cooldown
+    return cooldown and (cooldown > GetGCD() + 0.1)
+end
+
 function FearAbility.IsReady(ability)
-    if ability and IsAbilityEnabled(ability.id) and not FearAbility.OnCooldown(ability) then
+    if IsAbilityEnabled(ability.id) and not FearAbility.OnCooldown(ability) then
+            addToLog("FearAbility.IsReady")
+
         return true
     else
         return false
     end 
-end
-
-function FearAbility.OnCooldown(ability)
-    changeHotbar(hotbar_test_slot, ability.id)
-    local cooldown = GetHotbarCooldown(hotbar_test_slot)    
-    local global_cooldown = GetGCD()
-
-    return cooldown and (cooldown > global_cooldown + 0.1)
 end
 
 function FearAbility.IsUseful(ability)
@@ -70,7 +100,7 @@ function FearAbility.IsUseful(ability)
     end
 end
 
-function FearAbility.IsAbility(ability)
+function FearAbility.IsAbility(ability)-- NOO!
     if ability.actionType then return true end
     return false
 end
@@ -78,6 +108,17 @@ end
 function FearAbility.IsItem(item)
     if item.actionType then return true end
     return false
+end
+
+function FearAbility.IsBuff(ability)
+    if not ability then return false end
+    return ability.isBuff or ability.isHealing or ability.isBlessing
+end
+
+function FearAbility.IsDebuff(ability)
+    if not ability then return false end
+    return ability.isHex or ability.isCurse or ability.isCripple
+        or ability.isAilment or ability.isDebuff
 end
 
 function FearAbility.RequiresGroupMember(ability)
@@ -129,13 +170,13 @@ function FearAbility.GetObjectDetails(obj, objName, targetDepth, previousDepth)
     return contents
 end
 
-function FearAbility.GetAbilityCastTimeText (abilityData)
-    if (abilityData.numTacticSlots > 0)
+function FearAbility.GetAbilityCastTimeText(ability)
+    if (ability.numTacticSlots > 0)
     then
         return GetString (StringTables.Default.LABEL_ABILITY_TOOLTIP_PASSIVE_CAST)
     end
     
-    local castTime = GetAbilityCastTime (abilityData.id)
+    local castTime = GetAbilityCastTime (ability.id)
     
     if (castTime > 0) 
     then
@@ -215,6 +256,26 @@ function FearAbility.GetAbilityRangeText (abilityData)
     end
     
     return (labelText)
+end
+function FearAbility.GetRadius(ability)
+    local descString = tostring(GetAbilityDesc(ability.id))
+    local timePos = 1
+    local start = 1
+    local finish = string.len(descString)
+    if finish <= 0 then return 0 end
+    local i = 1
+    local totalTime = 0
+
+    while start < finish do
+        timePos = string.find(descString," feet",start)
+        i = i + 1
+        if timePos == nil then break end
+        local addTime = tonumber(string.sub(descString, timePos-2, timePos))
+        totalTime = totalTime + addTime
+        start = timePos+1
+        if i > 20 then break end
+    end
+    return totalTime
 end
 
 function FearAbility.GetAbilityLevelText (abilityData)

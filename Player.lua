@@ -19,14 +19,39 @@ local function addToDebug(str) Fear.Debug(str) end
 
 --##############################################################
 -- Variables
+FearPlayer.CONDITIONS = {
+    heal    = "isHealing",
+    dbuf    = "isDebuff",
+    buf     = "isBuff",
+    def     = "isDefensive",
+    off     = "isOffensive",
+    dam     = "isDamaging",
+    sbuf    = "isStatsBuff",
+    hex     = "isHex",
+    cur     = "isCurse",
+    crip    = "isCripple",
+    ail     = "isAilment",
+    bols    = "isBolster",
+    aug     = "isAugmentation",
+    bless   = "isBlessing",
+    ench    = "isEnchantment",
+    unst    = "isUnstoppable",
+    imm     = "isImmovable",
+    sna     = "isSnared",
+    roo     = "isRooted",
+    det     = "isDetaunted",
+    mou     = "isMounted"
+}
 FearPlayer.position = {current = GetPlayerPosition(), track = {x=0,y=0,z=0}}
 FearPlayer.cast_timer = {current = 0, old = L"0.0s"}
-FearPlayer.guid = 0
-FearPlayer.name = GameData.Player.name
+FearPlayer.GUID = nil
+FearPlayer.name = string.sub(WStringToString(GameData.Player.name), 1, -3)
 FearPlayer.group_data = nil
 FearPlayer.can_resurrect = false
+FearPlayer.can_heal = false
 FearPlayer.in_group = false
 FearPlayer.is_moving = false
+FearPlayer.is_casting = false
 FearPlayer.in_scenario = false
 FearPlayer.in_warband = false
 FearPlayer.group_info = {}
@@ -35,6 +60,8 @@ FearPlayer.cast_pause = 0
 FearPlayer.cast_time = 0
 FearPlayer.last_cast = nil
 FearPlayer.equipment_data = {}
+FearPlayer.cast_pause = 0
+
 
 --##############################################################
 -- Functions
@@ -77,7 +104,30 @@ function FearPlayer.OnBeginCast(abilityId, isChannel, desiredCastTime, averageLa
 		FearPlayer.last_cast = abilityData
 
 	    addToLog(L"Player is casting "..abilityData.name)
-	    FearAbility.is_casting = true
+	    FearPlayer.is_casting = true
+	end
+end
+
+function FearPlayer.Cast(ability, target)	
+	if FearAbility.IsReady(ability) then
+		local tGUID = target.GUID --issues??
+		local aID = ability.id --issues??
+		addToLog(tostring(ability.name)..": "..tostring(target.name))		
+
+		addToLog("Cast2")
+		if tGUID  and aID  then
+			addToLog("Spell Cast")
+			Target(tGUID)
+			Cast(aID)
+		end
+	end
+	return true
+end
+
+function FearPlayer.DecCastPause()
+	FearPlayer.cast_pause = FearPlayer.cast_pause - 1
+	if FearPlayer.cast_pause < 0 then
+		FearPlayer.cast_pause = 0
 	end
 end
 
@@ -96,7 +146,7 @@ function FearPlayer.OnEndCast(interupt)
 			Cast(FearPlayer.last_cast.id)
 			addToLog("Cast Interupted")
 	    else
-		    if FearAbility.is_casting then
+		    if FearPlayer.is_casting then
 		    	--addToLog("Player end cast")
 		    end
 		end
@@ -146,12 +196,36 @@ function FearPlayer.IsRVR() -- WORKING
     return GameData.Player.rvrZoneFlagged
 end
 
+function FearPlayer.InCombat()
+    return GameData.Player.inCombat
+end
+
+function FearPlayer.InAParty()
+    return GetNumGroupmates() > 0
+end
+
+function FearPlayer.InWarBand()
+    return IsWarBandActive()
+end
+
+function FearPlayer.inScenario()
+    return GameData.Player.isInScenario
+end
+
 function FearPlayer.HasActionPoints(value) 
     return GameData.Player.actionPoints.current >= value
 end
 
 function FearPlayer.Level()
 	return GameData.Player.level
+end
+
+function FearPlayer.SetSpeed(speed)
+	if speed then
+		SetSpeed(speed)
+	else
+		SetSpeed(1)
+	end
 end
 
 function FearPlayer.GetEquipmentData()
@@ -180,28 +254,38 @@ function FearPlayer.HeathCheck() --Broken
 			if FearPlayer.UseHealthPotion() then
 				FearTarget.Friendly(ability)
 			end
+			FearPlayer.UseHealthPotion()
 		end
-		FearPlayer.UseHealthPotion()
     else
         return false
 	end
     return true
 end
 
+function FearPlayer.UseHealthPotion()
+	local potion = {[208211] = "Lesser Potion of Healing",}
+end
+
 function FearPlayer.CanHeal() --WORKING
 	if FearCareer.db[GameData.Player.career.line].arch.heal then
+		FearPlayer.can_heal = true
 		return true
 	else
 		return false
 	end
 end
 
-function FearPlayer.CanResurrect(ability)
-	for _,resurrect_id in pairs(resurrect_abilities) do
-		if ability.id == resurrect_id then
-			FearPlayer.can_resurrect = ability.id
+function FearPlayer.CanResurrect()
+	if FearCareer.db[GameData.Player.career.line].arch.heal then
+		for k,v in pairs(FearAbility.resurrect_ability) do
+
+			if FearCareer.modules[FearCareer.module_loaded].abilities[k] then
+				FearPlayer.can_resurrect = true
+				return true
+			end
 		end
-	end
+	 end 
+	 return false
 end
 
 function FearPlayer.CheckForPlayerAttackers()

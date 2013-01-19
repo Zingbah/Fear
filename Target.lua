@@ -20,16 +20,19 @@ local function addToDebug(str) Fear.Debug(str) end
 
 --##############################################################
 -- Variables
-FearTarget.last_known_hostile = {}
-FearTarget.last_known_hostile_old = {GUID=0}
-FearTarget.last_known_friendly = {}
-FearTarget.last_known_friendly_old = {GUID=0}
+FearTarget.TYPE = {
+    PLAYER  = "p",
+    FRIEND  = "f",
+    ENEMY   = "e"
+}
+FearTarget.last_known_hostile = {GUID=nil}
+FearTarget.last_known_friendly =  {GUID=nil}
 FearTarget.entity_list = {friendly = {}, hostile = {}}
 FearTarget.search_radius = 300
 FearTarget.heal_radius = 150
 FearTarget.dps_radius = 100
-FearTarget.friendly_entity_string = "friendly,alive,player,los,alive,maxdistance=150"
-FearTarget.hostile_entity_string = "hostile,alive,player,los,maxdistance=100"
+FearTarget.friendly_entity_string = "friendly,player,maxdistance=150"
+FearTarget.hostile_entity_string = "hostile,alive,player,npc,maxdistance=100"
 FearTarget.dots = {}
 FearTarget.hots = {}
 FearTarget.rating = {
@@ -61,11 +64,11 @@ function FearTarget.Friendly()
     local entity_list = EntityList(FearTarget.friendly_entity_string)
     table.sort(entity_list, FearTarget.SortByHealth)
    
-    if table.maxn(entity_list) > 0 then
+    if #entity_list then
+    	--addToLog("FearTarget.Friendly()")
         for GUID,entity in pairs(entity_list) do
             if entity.healthPercent < Fear.ENV.HEALTHTHRESHOLD.heal then
-            	FearTarget.last_known_friendly = entity
-                if #FearPlayer.group_info > 0 then
+                if #FearPlayer.group_info then
                     for _,group_player in pairs(FearPlayer.group_info) do
                         if string.find(tostring(entity.name), tostring(group_player.name)) then
                             if Fear.ENV.SUPPORTMODE == "group" then
@@ -78,41 +81,68 @@ function FearTarget.Friendly()
                         end
                     end
                 end
-            	if FearTarget.last_known_friendly.GUID ~= FearTarget.last_known_friendly_old.GUID then
-					--addToLog("Friendly: "..tostring(FearTarget.last_known_friendly.name).." ["..tostring(FearTarget.last_known_friendly.healthPercent).."%]")
-					FearTarget.last_known_friendly_old = FearTarget.last_known_friendly
-            	else
-            		FearTarget.last_known_friendly = {}
+            	if GUID ~= FearTarget.last_known_friendly.GUID then
+					addToLog("Friendly: "..tostring(FearTarget.last_known_friendly.name).." ["..tostring(FearTarget.last_known_friendly.healthPercent).."%]")
+					FearTarget.last_known_friendly = entity
 				end
             end
         end
+    else
+		FearTarget.last_known_friendly = nil
+		FearTarget.last_known_friendly.GUID = nil
     end	
 end
 
 function FearTarget.Hostile()
-	   	-- Create a support target list based on player's priorities
+	-- Create a support target list based on player's priorities
     local entity_list = EntityList(FearTarget.hostile_entity_string)
     table.sort(entity_list, FearTarget.SortByHealth)
-   
-    if table.maxn(entity_list) > 0 then
+
+    if #entity_list then
         for GUID,entity in pairs(entity_list) do
-        	FearTarget.last_known_hostile = entity
-        	if  FearTarget.last_known_hostile.GUID ~= FearTarget.last_known_hostile_old.GUID then
-				--addToLog("Hostile: "..tostring(FearTarget.last_known_hostile.name).." ["..tostring(FearTarget.last_known_hostile.healthPercent).."%]")
-				FearTarget.last_known_hostile_old = FearTarget.last_known_hostile
-			else
-				FearTarget.last_known_hostile = {}
+        	    		--addToLog("FearTarget.Hostile()")
+        	if tonumber(entity.TargetType) == 3 or tonumber(entity.TargetType) == 6 then
+	        	if GUID ~= FearTarget.last_known_hostile.GUID and tonumber(entity.healthPercent) ~= tonumber(FearTarget.last_known_hostile.healthPercent) then	
+	        		if tonumber(entity.attackable) == 1 then
+		        		if FearTarget.IsTargettingMe(GUID) then
+							addToLog("***Hostile***: "..tostring(entity.name).." ["..tostring(entity.healthPercent).."%]")				
+						else  
+							--addToLog(tostring(GUID).."|"..tostring(FearTarget.last_known_hostile.GUID))    		
+							addToLog("Hostile: "..tostring(entity.name).." ["..tostring(entity.healthPercent).."%]")
+						end
+						FearTarget.last_known_hostile = entity
+						return true	
+					end	
+				end
 			end
         end
+    else
+    	FearTarget.last_known_hostile = nil
+    	FearTarget.last_known_hostile.GUID = nil
     end	
 end
-
 
 function FearTarget.IsDead(entity)
 	if entity.healthPercent <= 0 then
 		return true
 	end
 	return false
+end
+
+function FearTarget.HasFriend()
+    if TargetInfo.m_Units.selffriendlytarget ~=nil and TargetInfo.m_Units.selffriendlytarget.entityid ~=0 then
+        if TargetInfo.m_Units.selffriendlytarget.entityid ~= GameData.Player.worldObjNum then
+            return true
+        end
+    end
+    return false
+end
+
+function FearTarget.HasEnemy()
+    if TargetInfo.m_Units.selfhostiletarget ~=nil and TargetInfo.m_Units.selfhostiletarget.entityid ~=0 then
+    	return true
+    end
+    return false
 end
 
 function FearTarget.HasLowHealth(guid, threshold)
@@ -134,6 +164,14 @@ function FearTarget.SetDotTimer(GUID,ability,elapsed_time)
 	FearTarget.dots[GUID][ability.id] = elapsed_time
 end
 
+function FearTarget.AddDot(GUID,aID,eTime)
+	addToDebug(GUID.." "..aID.." "..eTime)
+	if FearTarget.TargetDots[GUID] == nil then
+		FearTarget.TargetDots[GUID] = {}
+	end
+	FearTarget.TargetDots[GUID][aID] = eTime
+end
+
 function FearTarget.HasDots(GUID,ability)
 	if FearTarget.GetEffectTime(ability.id) <= 0 then
 		return false
@@ -145,6 +183,16 @@ function FearTarget.HasDots(GUID,ability)
 		end
 	end
 	return false
+end
+
+function FearTarget.DiminishDots()
+    for GUID , Details in pairs(FearTarget.dots) do
+        for aID, Details in pairs(FearTarget.dots[GUID]) do
+            if FearTarget.dots[GUID][aID] > 0 then
+                FearTarget.dots[GUID][aID] = FearTarget.dots[GUID][aID] - 1
+            end
+        end
+    end
 end
 
 function FearTarget.CreateFriendlyEntityString()
@@ -235,6 +283,16 @@ function FearTarget.InGroup(entity)
     end
     return false
 end
+
+function FearTarget.InMyParty()
+    if not FearTarget.HasFriend() then return true end
+    local targetName = TargetInfo:UnitName(TargetInfo.FRIENDLY_TARGET) 
+    if GroupWindow.IsPlayerInGroup( targetName ) then
+        return true
+    end
+    return false
+end
+
 
 function FearTarget.InWarband(entity)
 	if FearPlayer.InScenario() then

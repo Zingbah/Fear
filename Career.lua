@@ -19,7 +19,7 @@ local function addToDebug(str) Fear.Debug(str) end
 --##############################################################
 -- Variables
 
-FearCareer.modules_loaded = false
+FearCareer.module_loaded = 1
 FearCareer.custom_modules = {}
 FearCareer.modules = {}
 FearCareer.module_names = {}
@@ -92,7 +92,7 @@ function FearCareer.LoadModules() -- Loads and career ability FearTarget. into t
 	end
 	
 	FearCareer.modules = custom_modules
-	FearCareer.modules_loaded = true
+	FearCareer.module_loaded = 1
 
 	return true
 --]]

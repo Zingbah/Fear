@@ -58,11 +58,10 @@ Fear = {
 -- Local Variables and Functions
 
 local FEAR_DELAY = 0.2
-local MOVING_THROTTLE = 0.1
-local MAP_PATHS_THROTTLE = 1
+local DIMINISH_DELAY = 1
 local timer = 0
 local delay_throttle = FEAR_DELAY
-local moving_throttle = MOVING_THROTTLE
+local diminish_throttle = DIMINISH_DELAY
 local fear_init = {
 	FearGUI,
 	FearPlayer,
@@ -112,6 +111,7 @@ Fear.verbose = true -- Verbose logging in chat window
 Fear.debug = true -- Debugging in log window
 Fear.language = Languages[SystemData.Settings.Language.active]
 Fear.support_mode_options = {"self", "group", "warband", "all"}
+Fear.server_name = WStringToString(SystemData.Server.Name)
 
 -- Environment Default Setup
 Fear.ENV = {
@@ -162,6 +162,7 @@ function Fear.OnInitialize()
 	    RegisterEventHandler(SystemData.Events.PLAYER_POSITION_UPDATED, "FearPlayer.OnMove")
 		RegisterEventHandler(SystemData.Events.PLAYER_NEW_ABILITY_LEARNED, "Fear.RefreshEnvironment" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_ABILITIES_LIST_UPDATED, "Fear.RefreshEnvironment" )
+	    RegisterEventHandler(SystemData.Events.PLAYER_NEW_PET_ABILITY_LEARNED, "Fear.RefreshEnvironment" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_BEGIN_CAST, "FearPlayer.OnBeginCast" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_END_CAST, "FearPlayer.OnEndCast" )
 	    RegisterEventHandler(SystemData.Events.PLAYER_ZONE_CHANGED, "FearPlayer.OnZoneChange")
@@ -246,50 +247,50 @@ function Fear.OnInitialize()
 end
 
 function Fear.OnUpdate(elapsed) 
-	if Fear.ENV.ENABLED then
-	 --[[
-	    if FearAbility.cast_time > 0 then
-	        FearAbility.cast_time = FearAbility.cast_time - elapsed
+	if Fear.ENV.ENABLED then 
+	   FearPlayer.isMoving()
 
-	        if FearAbility.cast_time <= 0 then
-	            FearAbility.cast_time = 0
-	            FearAbility.is_casting = false
-	        end
-	    end
-	    
-	    delay_throttle = delay_throttle - elapsed
+		delay_throttle = delay_throttle - elapsed
+		if delay_throttle <= 0 then
+			delay_throttle = FEAR_DELAY
+			if FearPlayer.cast_pause > 0 then
+				FearPlayer.DecCastPause()
+			else
+				Fear.Action()			
+			end
+		end
 
-	    if delay_throttle > 0 then
-	 --       return -- cut out early
-	    end	
-	   ]]
-		FearTarget.Friendly()
-		FearTarget.Hostile()
-		FearPlayer.isMoving()
-		Fear.Action()
+		DiminishThrottle = DiminishThrottle - elapsed
+		if DiminishThrottle <= 0 then
+			DiminishThrottle = DIMINISH_DELAY
+			FearTarget.DiminishDots()
+		end
 	end
 end
 
 function Fear.Action()
-	for _,rating in pairs(FearAbility.sorted_keys) do
-		ability = FearAbility.storage.abilities[rating]
-		Target(FearTarget.last_known_friendly.GUID)
-		Target(FearTarget.last_known_hostile.GUID)
-
-		if not FearAbility.is_casting  then
-			--addToLog(tostring(ability.name)..": "..rating)		
-			if FearTarget.last_known_friendly.GUID then
-				Cast(ability.id)
-				return true
-			end
-
-			if FearTarget.last_known_hostile.GUID  then
-				Cast(ability.id)
-				return true
-			end
-		end
-	end
+	local skip_this = false
+	local skip_reason = "Skipped: "
 	
+	if not FearPlayer.is_casting  then
+		FearTarget.Friendly()
+		FearTarget.Hostile()
+
+
+		for _,rating in pairs(FearAbility.sorted_keys) do
+			local ability = FearAbility.storage.abilities[rating]
+			if FearAbility.IsReady(ability) then
+				addToLog(tostring(rating)..": "..tostring(ability.name))		
+				if FearTarget.last_known_friendly.GUID then
+					FearPlayer.Cast(ability, FearTarget.last_known_friendly)
+				end
+					
+				if FearTarget.last_known_hostile.GUID > 0 then
+					FearPlayer.Cast(ability, FearTarget.last_known_hostile)			
+				end
+			end
+		end	
+	end	
 end
 
 function Fear.OnShutdown() -- Warhammer close events
@@ -385,11 +386,9 @@ function Fear.SetupEnvironment(reset, refresh)
 	
 	--Identify if player is dps or support and set a default
 	if not Fear.ENV.SUPPORTMODE or reset then
-		if FearCareer.db[GameData.Player.career.line].arch.heal then
-			FearPlayer.can_heal = true
+		if FearPlayer.CanHeal() then
 			Fear.ENV.SUPPORTMODE = "all"
 		else
-			FearPlayer.can_heal = false
 			Fear.ENV.SUPPORTMODE = false
 		end
 	end
